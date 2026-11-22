@@ -5,14 +5,28 @@ const getQuestions = async (req, res) => {
   try {
     const { session_id } = req.query;
     const where = session_id ? { session_id, status: 'visible' } : { status: 'visible' };
-    
+    const userId = req.userId;
+
     const questions = await Question.findAll({
       where,
-      include: [{ model: Question.sequelize.models.User, as: 'user', attributes: ['id', 'name'] }],
+      include: [
+        { model: Question.sequelize.models.User, as: 'user', attributes: ['id', 'name'] },
+        { model: QuestionVote, as: 'votes', attributes: ['id', 'user_id'] },
+      ],
       order: [['created_at', 'DESC']],
     });
 
-    res.json({ questions });
+    const formatted = questions.map((q) => {
+      const plain = q.toJSON();
+      const voteList = Array.isArray(plain.votes) ? plain.votes : [];
+      return {
+        ...plain,
+        votes: voteList.length,
+        voted: voteList.some((v) => v.user_id === userId),
+      };
+    });
+
+    res.json({ questions: formatted });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -61,12 +75,13 @@ const voteQuestion = async (req, res) => {
 
     const existing = await QuestionVote.findOne({ where: { question_id, user_id: userId } });
     if (existing) {
-      return res.status(400).json({ message: 'Already voted' });
+      await existing.destroy();
+    } else {
+      await QuestionVote.create({ question_id, user_id: userId });
     }
 
-    await QuestionVote.create({ question_id, user_id: userId });
-
-    res.json({ message: 'Vote recorded' });
+    const count = await QuestionVote.count({ where: { question_id } });
+    res.json({ message: 'Vote updated', votes: count, voted: !existing });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -96,4 +96,39 @@ const getWishCount = async (req, res) => {
   }
 };
 
-module.exports = { getMentorDirectory, addWish, getMyWishes, getWishCount };
+const getWishesForMentor = async (req, res) => {
+  try {
+    const mentorId = req.userId;
+    const wishes = await Wish.findAll({
+      where: { mentor_id: mentorId },
+      include: [{
+        model: User,
+        as: 'mentee',
+        attributes: ['id', 'name', 'photo_url'],
+        include: [{ model: MenteeProfile, as: 'menteeProfile', attributes: ['goal', 'course', 'institution'] }],
+      }],
+      order: [['created_at', 'DESC']],
+    });
+    res.json({ wishes });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const removeWish = async (req, res) => {
+  try {
+    const { mentor_id } = req.body;
+    const menteeId = req.userId;
+
+    if (!mentor_id) {
+      return res.status(400).json({ message: 'mentor_id is required' });
+    }
+
+    const deleted = await Wish.destroy({ where: { mentee_id: menteeId, mentor_id } });
+    res.json({ message: 'Wish removed', removed: deleted > 0 });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getMentorDirectory, addWish, getMyWishes, getWishCount, removeWish, getWishesForMentor };

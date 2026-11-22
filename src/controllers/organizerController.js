@@ -59,6 +59,7 @@ const getRegistrations = async (req, res) => {
       include: [
         {
           model: User,
+          as: 'user',
           where: role ? { role } : {},
           attributes: ['id', 'name', 'email', 'phone', 'role'],
         },
@@ -104,7 +105,11 @@ const getRoundStatus = async (req, res) => {
   try {
     const rounds = await Round.findAll({
       order: [['break_no', 'ASC'], ['round_no', 'ASC']],
-      include: [{ model: Match, as: 'matches' }],
+      include: [{
+        model: Match,
+        as: 'matches',
+        include: [{ model: User, as: 'mentor', attributes: ['id', 'name', 'photo_url'] }],
+      }],
     });
     res.json({ rounds });
   } catch (err) {

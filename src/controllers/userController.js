@@ -29,23 +29,31 @@ const updateProfile = async (req, res) => {
     }
 
     const { name, phone, photo_url, linkedin_url } = req.body;
-    if (name) user.name = name;
-    if (phone) user.phone = phone;
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
     if (photo_url !== undefined) user.photo_url = photo_url;
     if (linkedin_url !== undefined) user.linkedin_url = linkedin_url;
     await user.save();
 
-    // Update role-specific profile
+    // Update role-specific profile (partial update — never reset approval/limits)
     if (user.role === 'mentee' && req.body.menteeProfile) {
-      await MenteeProfile.upsert({
-        user_id: user.id,
-        ...req.body.menteeProfile,
+      const [mp] = await MenteeProfile.findOrCreate({
+        where: { user_id: user.id },
+        defaults: { user_id: user.id, ...req.body.menteeProfile },
       });
+      if (mp) {
+        const { user_id, ...fields } = req.body.menteeProfile;
+        await mp.update(fields);
+      }
     } else if (user.role === 'mentor' && req.body.mentorProfile) {
-      await MentorProfile.upsert({
-        user_id: user.id,
-        ...req.body.mentorProfile,
+      const [mp] = await MentorProfile.findOrCreate({
+        where: { user_id: user.id },
+        defaults: { user_id: user.id, ...req.body.mentorProfile },
       });
+      if (mp) {
+        const { user_id, ...fields } = req.body.mentorProfile;
+        await mp.update(fields);
+      }
     }
 
     const updated = await User.findByPk(user.id, {

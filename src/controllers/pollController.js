@@ -54,12 +54,19 @@ const votePoll = async (req, res) => {
 
     const existing = await PollVote.findOne({ where: { poll_id: pollId, user_id: userId } });
     if (existing) {
-      return res.status(400).json({ message: 'Already voted' });
+      if (existing.option_index === option_index) {
+        // Same option — remove vote (toggle off)
+        await existing.destroy();
+        return res.json({ message: 'Vote removed', voted: false, option_index: -1 });
+      }
+      // Different option — change vote
+      existing.option_index = option_index;
+      await existing.save();
+      return res.json({ message: 'Vote changed', voted: true, option_index });
     }
 
     await PollVote.create({ poll_id: pollId, user_id: userId, option_index });
-
-    res.json({ message: 'Vote recorded' });
+    res.json({ message: 'Vote recorded', voted: true, option_index });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -71,12 +78,14 @@ const getPollResults = async (req, res) => {
     if (!poll_id) {
       const latestPoll = await Poll.findOne({ order: [['created_at', 'DESC']] });
       if (!latestPoll) {
-        return res.json({ poll: null, results: [], totalVotes: 0 });
+        return res.json({ poll: null, results: [], totalVotes: 0, voted_index: -1 });
       }
       poll_id = latestPoll.id;
     }
     const votes = await PollVote.findAll({ where: { poll_id } });
-    
+    const userId = req.userId;
+    const userVote = votes.find((v) => v.user_id === userId);
+
     const poll = await Poll.findByPk(poll_id);
     if (!poll) {
       return res.status(404).json({ message: 'Poll not found' });
@@ -88,7 +97,7 @@ const getPollResults = async (req, res) => {
       votes: votes.filter(v => v.option_index === index).length,
     }));
 
-    res.json({ poll, results, totalVotes: votes.length });
+    res.json({ poll, results, totalVotes: votes.length, voted_index: userVote ? userVote.option_index : -1 });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

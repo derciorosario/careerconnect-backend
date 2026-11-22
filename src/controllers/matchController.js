@@ -53,7 +53,17 @@ const getMentorMatch = async (req, res) => {
     const { round_id } = req.query;
     const userId = req.userId;
 
-    const where = round_id ? { round_id, mentor_id: userId } : { mentor_id: userId };
+    // If no round_id, find the currently running round
+    let targetRoundId = round_id;
+    if (!targetRoundId) {
+      const runningRound = await Round.findOne({
+        where: { status: 'running' },
+        order: [['break_no', 'ASC'], ['round_no', 'ASC']],
+      });
+      if (runningRound) targetRoundId = runningRound.id;
+    }
+
+    const where = targetRoundId ? { round_id: targetRoundId, mentor_id: userId } : { mentor_id: userId };
     const match = await Match.findOne({
       where,
       include: [
@@ -68,7 +78,7 @@ const getMentorMatch = async (req, res) => {
 
     const menteeProfiles = await MenteeProfile.findAll({
       where: { user_id: match.mentee_ids },
-      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'photo_url', 'goal', 'pitch'] }],
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'photo_url'] }],
     });
 
     res.json({
@@ -76,6 +86,7 @@ const getMentorMatch = async (req, res) => {
         id: match.id,
         table_no: match.table_no,
         score: match.score,
+        round_id: match.round_id,
         mentees: match.mentee_ids.map((id) => {
           const profile = menteeProfiles.find(p => p.user_id === id);
           return {
@@ -84,6 +95,7 @@ const getMentorMatch = async (req, res) => {
             photo_url: profile ? profile.user.photo_url : '',
             goal: profile ? profile.goal : '',
             pitch: profile ? profile.pitch : '',
+            course: profile ? profile.course : '',
           };
         }),
       },

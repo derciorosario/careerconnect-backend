@@ -1,5 +1,5 @@
 'use strict';
-const { MentorshipRequest, User, MentorProfile, AuditLog } = require('../models');
+const { MentorshipRequest, User, MentorProfile, MenteeProfile, AuditLog } = require('../models');
 
 const createRequest = async (req, res) => {
   try {
@@ -64,7 +64,12 @@ const getRequestsForMentor = async (req, res) => {
     const userId = req.userId;
     const requests = await MentorshipRequest.findAll({
       where: { mentor_id: userId },
-      include: [{ model: User, as: 'mentee', attributes: ['id', 'name', 'goal', 'pitch', 'photo_url'] }],
+      include: [{
+        model: User,
+        as: 'mentee',
+        attributes: ['id', 'name', 'photo_url'],
+        include: [{ model: MenteeProfile, as: 'menteeProfile', attributes: ['goal', 'pitch', 'course'] }],
+      }],
     });
     res.json({ requests });
   } catch (err) {
