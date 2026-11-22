@@ -9,6 +9,7 @@ const getProfile = async (req, res) => {
       include: [
         { model: MenteeProfile, as: 'menteeProfile' },
         { model: MentorProfile, as: 'mentorProfile' },
+        { model: Registration, as: 'registrations', include: [{ model: Event, as: 'event' }] },
       ],
     });
     if (!user) {

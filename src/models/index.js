@@ -144,6 +144,7 @@ PollVote.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 // Event has many Announcements
 Event.hasMany(Announcement, { foreignKey: 'event_id', as: 'announcements' });
 Announcement.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
+Announcement.belongsTo(User, { foreignKey: 'sent_by', as: 'sentBy' });
 
 // User has many Notifications
 User.hasMany(Notification, { foreignKey: 'user_id', as: 'notifications' });

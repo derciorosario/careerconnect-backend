@@ -51,7 +51,7 @@ const getMyRequests = async (req, res) => {
     const userId = req.userId;
     const requests = await MentorshipRequest.findAll({
       where: { mentee_id: userId },
-      include: [{ model: User, as: 'mentor', attributes: ['id', 'name', 'photo_url', 'company'] }],
+      include: [{ model: User, as: 'mentor', attributes: ['id', 'name', 'photo_url'], include: [{ model: MentorProfile, as: 'mentorProfile', attributes: ['company', 'job_title'] }] }],
     });
     res.json({ requests });
   } catch (err) {

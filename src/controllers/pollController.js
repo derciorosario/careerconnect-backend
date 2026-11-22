@@ -42,12 +42,22 @@ const votePoll = async (req, res) => {
     const { poll_id, option_index } = req.body;
     const userId = req.userId;
 
-    const existing = await PollVote.findOne({ where: { poll_id, user_id: userId } });
+    // Auto-resolve active poll if poll_id is not a real ID
+    let pollId = poll_id;
+    if (!pollId || pollId === 'current') {
+      const latestPoll = await Poll.findOne({ order: [['created_at', 'DESC']] });
+      if (!latestPoll) {
+        return res.status(404).json({ message: 'No poll found' });
+      }
+      pollId = latestPoll.id;
+    }
+
+    const existing = await PollVote.findOne({ where: { poll_id: pollId, user_id: userId } });
     if (existing) {
       return res.status(400).json({ message: 'Already voted' });
     }
 
-    await PollVote.create({ poll_id, user_id: userId, option_index });
+    await PollVote.create({ poll_id: pollId, user_id: userId, option_index });
 
     res.json({ message: 'Vote recorded' });
   } catch (err) {
@@ -57,7 +67,14 @@ const votePoll = async (req, res) => {
 
 const getPollResults = async (req, res) => {
   try {
-    const { poll_id } = req.query;
+    let { poll_id } = req.query;
+    if (!poll_id) {
+      const latestPoll = await Poll.findOne({ order: [['created_at', 'DESC']] });
+      if (!latestPoll) {
+        return res.json({ poll: null, results: [], totalVotes: 0 });
+      }
+      poll_id = latestPoll.id;
+    }
     const votes = await PollVote.findAll({ where: { poll_id } });
     
     const poll = await Poll.findByPk(poll_id);

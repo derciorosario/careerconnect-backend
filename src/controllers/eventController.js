@@ -3,7 +3,8 @@ const { Event, Session, Speaker, AuditLog } = require('../models');
 
 const getEvent = async (req, res) => {
   try {
-    const event = await Event.findOne({ where: { status: 'active' } }, {
+    const event = await Event.findOne({
+      where: { status: 'active' },
       include: [
         { model: Session, as: 'sessions' },
         { model: Speaker, as: 'speakers' },
@@ -57,7 +58,8 @@ const configureEvent = async (req, res) => {
 
 const getProgram = async (req, res) => {
   try {
-    const event = await Event.findOne({ where: { status: 'active' } }, {
+    const event = await Event.findOne({
+      where: { status: 'active' },
       include: [
         { model: Session, as: 'sessions', include: [{ model: Speaker, as: 'speaker' }] },
       ],

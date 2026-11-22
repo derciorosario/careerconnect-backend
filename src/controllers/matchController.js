@@ -7,13 +7,15 @@ const getMyMatch = async (req, res) => {
     const userId = req.userId;
 
     const where = round_id ? { round_id } : {};
-    const match = await Match.findOne({
-      where: { ...where, mentee_ids: { [require('sequelize').Op.contains]: [userId] } },
+    const matches = await Match.findAll({
+      where,
       include: [
         { model: Round, as: 'round' },
         { model: User, as: 'mentor', include: [{ model: MentorProfile, as: 'mentorProfile' }] },
       ],
     });
+
+    const match = matches.find(m => m.mentee_ids && m.mentee_ids.includes(userId));
 
     if (!match) {
       return res.json({ match: null, message: 'No match for this round' });

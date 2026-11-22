@@ -9,7 +9,12 @@ const { Op } = require('sequelize');
 
 const register = async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
+    const {
+      name, email, phone, password, role,
+      level, course, institution, interests, goal, pitch,
+      jobTitle, company, sector, years, mentorInterests, canHelpGoals, supportType,
+      photo, linkedin,
+    } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'Name, email, password and role are required' });
@@ -17,7 +22,11 @@ const register = async (req, res) => {
 
     const existing = await User.findOne({ where: { email } });
     if (existing) {
-      return res.status(400).json({ message: 'Já existe uma conta com este e-mail' });
+      if (existing.emailVerified) {
+        return res.status(400).json({ message: 'Já existe uma conta verificada com este e-mail' });
+      }
+      // Delete unverified user so they can re-register
+      await existing.destroy();
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -30,18 +39,35 @@ const register = async (req, res) => {
       role,
       password_hash,
       password_salt: salt,
+      photo_url: photo || null,
+      linkedin_url: linkedin || null,
       consent_at: new Date(),
       consent_version: '1.0',
     });
 
-    // Create role-specific profile
+    // Create role-specific profile with all fields
     if (role === 'mentee') {
-      await MenteeProfile.create({ user_id: user.id });
+      await MenteeProfile.create({
+        user_id: user.id,
+        level: level || '',
+        course: course || '',
+        institution: institution || '',
+        interests: interests || [],
+        goal: goal || '',
+        pitch: pitch || '',
+      });
     } else if (role === 'mentor') {
       await MentorProfile.create({
         user_id: user.id,
-        approval: 'pending',
+        job_title: jobTitle || '',
+        company: company || '',
+        sector: sector || '',
+        years: years ? Number(years) : 0,
+        interests: mentorInterests || [],
+        can_help_goals: canHelpGoals || [],
+        support_type: supportType || '',
         max_mentees: 3,
+        approval: 'pending',
       });
     }
 
@@ -57,7 +83,7 @@ const register = async (req, res) => {
         user_id: user.id,
         ticket_code,
         qr_payload: qrDataUrl,
-        status: role === 'mentor' ? 'registered' : 'registered',
+        status: 'registered',
       });
 
       await AuditLog.create({
@@ -67,9 +93,6 @@ const register = async (req, res) => {
         entity_id: user.id,
       });
     }
-
-    const accessToken = signAccessToken({ userId: user.id, role: user.role });
-    const refreshToken = signRefreshToken({ userId: user.id });
 
     // Generate email verification OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -116,6 +139,14 @@ const login = async (req, res) => {
 
     if (!user.emailVerified) {
       return res.status(403).json({ message: 'Email não verificado. Verifique o seu email antes de entrar.' });
+    }
+
+    // For mentors: check if mentor profile is approved
+    if (user.role === 'mentor') {
+      const mentorProfile = await MentorProfile.findOne({ where: { user_id: user.id } });
+      if (!mentorProfile || mentorProfile.approval !== 'approved') {
+        return res.status(403).json({ message: 'A sua conta de mentor ainda está pendente de aprovação pela equipa. Aguarde a aprovação antes de entrar.' });
+      }
     }
 
     const accessToken = signAccessToken({ userId: user.id, role: user.role });
@@ -215,14 +246,40 @@ const verifyEmail = async (req, res) => {
     user.emailVerifiedAt = new Date();
     await user.save();
 
+    // Find registration to get ticket code and QR payload
+    const registration = await Registration.findOne({ where: { user_id: user.id } });
+    const ticketCode = registration?.ticket_code || null;
+    const qrPayload = registration?.qr_payload || null;
+
     const accessToken = signAccessToken({ userId: user.id, role: user.role });
     const refreshToken = signRefreshToken({ userId: user.id });
+
+    // For mentees: send digital ticket with QR Code
+    if (user.role === 'mentee' && ticketCode) {
+      await sendEmail({
+        to: email,
+        subject: 'O seu bilhete digital - Career Connect',
+        text: `O seu registo foi concluído. Bilhete: ${ticketCode}. Código curto: ${ticketCode}.`,
+        html: `
+          <h2>Bilhete Digital - Career Connect</h2>
+          <p>O seu registo foi concluído com sucesso!</p>
+          <p><strong>Código do bilhete:</strong> ${ticketCode}</p>
+          <p><strong>Código curto:</strong> ${ticketCode}</p>
+          ${qrPayload ? `<img src="${qrPayload}" alt="QR Code" style="max-width: 200px;"/>` : ''}
+          <p>Apresente este bilhete no evento.</p>
+        `,
+      });
+    }
+
+    const requiresApproval = user.role === 'mentor';
 
     res.json({
       message: 'Email verificado com sucesso',
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
       accessToken,
       refreshToken,
+      ticketCode,
+      requiresApproval,
     });
   } catch (err) {
     console.error(err);
@@ -258,6 +315,67 @@ const resendEmailOTP = async (req, res) => {
     });
 
     res.json({ message: 'Código de verificação reenviado por email' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: 'Utilizador não encontrado' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.otp_code = otp;
+    user.otp_expires_at = otpExpiresAt;
+    await user.save();
+
+    await sendEmail({
+      to: email,
+      subject: 'Redefinição de palavra-passe - Career Connect',
+      text: `O seu código de redefinição é: ${otp}. Válido por 10 minutos.`,
+      html: `<h2>Redefinição de palavra-passe</h2><p>O seu código de redefinição é: <strong>${otp}</strong>. Válido por 10 minutos.</p>`,
+    });
+
+    res.json({ message: 'Código de redefinição enviado por email' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'A nova palavra-passe precisa de pelo menos 6 caracteres.' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (!user || user.otp_code !== otp) {
+      return res.status(401).json({ message: 'Código de redefinição inválido' });
+    }
+
+    if (user.otp_expires_at < new Date()) {
+      return res.status(401).json({ message: 'Código de redefinição expirado' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password_hash = await bcrypt.hash(newPassword, salt);
+    user.password_salt = salt;
+    user.otp_code = null;
+    user.otp_expires_at = null;
+    await user.save();
+
+    res.json({ message: 'Palavra-passe redefinida com sucesso' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
@@ -304,4 +422,4 @@ const me = async (req, res) => {
   }
 };
 
-module.exports = { register, login, requestOTP, verifyOTP, verifyEmail, resendEmailOTP, refreshToken, me };
+module.exports = { register, login, requestOTP, verifyOTP, verifyEmail, resendEmailOTP, forgotPassword, resetPassword, refreshToken, me };

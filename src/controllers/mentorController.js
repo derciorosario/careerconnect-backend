@@ -1,5 +1,5 @@
 'use strict';
-const { User, MentorProfile, Wish, AuditLog } = require('../models');
+const { User, MentorProfile, Wish, AuditLog, Event } = require('../models');
 const { Op } = require('sequelize');
 
 const getMentorDirectory = async (req, res) => {
@@ -28,8 +28,18 @@ const getMentorDirectory = async (req, res) => {
 
 const addWish = async (req, res) => {
   try {
-    const { mentor_id, event_id } = req.body;
+    const { mentor_id } = req.body;
     const menteeId = req.userId;
+
+    if (!mentor_id) {
+      return res.status(400).json({ message: 'mentor_id is required' });
+    }
+
+    // Find the active event
+    const event = await Event.findOne({ where: { status: 'active' } });
+    if (!event) {
+      return res.status(404).json({ message: 'No active event found' });
+    }
 
     // Check max 5 wishes
     const count = await Wish.count({ where: { mentee_id: menteeId } });
@@ -43,7 +53,7 @@ const addWish = async (req, res) => {
       return res.status(400).json({ message: 'Already marked this mentor' });
     }
 
-    const wish = await Wish.create({ mentee_id: menteeId, mentor_id, event_id });
+    const wish = await Wish.create({ mentee_id: menteeId, mentor_id, event_id: event.id });
 
     await AuditLog.create({
       actor_id: menteeId,
@@ -63,7 +73,12 @@ const getMyWishes = async (req, res) => {
     const menteeId = req.userId;
     const wishes = await Wish.findAll({
       where: { mentee_id: menteeId },
-      include: [{ model: User, as: 'mentor', attributes: ['id', 'name', 'photo_url', 'company'] }],
+      include: [{
+        model: User,
+        as: 'mentor',
+        attributes: ['id', 'name', 'photo_url'],
+        include: [{ model: MentorProfile, as: 'mentorProfile', attributes: ['company', 'job_title', 'sector'] }],
+      }],
     });
     res.json({ wishes });
   } catch (err) {

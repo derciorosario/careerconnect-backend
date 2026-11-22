@@ -8,7 +8,7 @@ const getQuestions = async (req, res) => {
     
     const questions = await Question.findAll({
       where,
-      include: [{ model: Question.sequelize.models.User, as: 'user', attributes: ['id', 'name', 'anonymous'] }],
+      include: [{ model: Question.sequelize.models.User, as: 'user', attributes: ['id', 'name'] }],
       order: [['created_at', 'DESC']],
     });
 
@@ -23,8 +23,18 @@ const createQuestion = async (req, res) => {
     const { session_id, body, anonymous } = req.body;
     const userId = req.userId;
 
+    // Auto-resolve session if not a valid UUID
+    let sessId = session_id;
+    if (!sessId || sessId === 'current') {
+      const currentSession = await Session.findOne({ order: [['created_at', 'DESC']] });
+      if (!currentSession) {
+        return res.status(404).json({ message: 'No session found' });
+      }
+      sessId = currentSession.id;
+    }
+
     const question = await Question.create({
-      session_id,
+      session_id: sessId,
       user_id: userId,
       body,
       anonymous: anonymous || false,
