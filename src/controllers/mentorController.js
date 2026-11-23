@@ -102,7 +102,7 @@ const getWishesForMentor = async (req, res) => {
       include: [{
         model: User,
         as: 'mentee',
-        attributes: ['id', 'name', 'photo_url'],
+        attributes: ['id', 'name', 'photo_url', 'email', 'phone'],
         include: [{ model: MenteeProfile, as: 'menteeProfile', attributes: ['goal', 'course', 'institution'] }],
       }],
       order: [['created_at', 'DESC']],
