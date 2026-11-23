@@ -1,5 +1,5 @@
 'use strict';
-const { User, MentorProfile, Wish, AuditLog, Event } = require('../models');
+const { User, MentorProfile, MenteeProfile, Wish, AuditLog, Event } = require('../models');
 const { Op } = require('sequelize');
 
 const getMentorDirectory = async (req, res) => {
