@@ -200,4 +200,92 @@ const resetRounds = async (req, res) => {
   }
 };
 
-module.exports = { getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, resetRounds };
+const createRound = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+    const { event_id, break_no, round_no, duration_minutes } = req.body;
+
+    const eventId = await resolveEventId(event_id);
+    if (!eventId) {
+      return res.status(400).json({ message: 'No active event found.' });
+    }
+
+    const round = await Round.create({
+      event_id: eventId,
+      break_no: break_no || 1,
+      round_no: round_no || 1,
+      status: 'planned',
+    });
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'create_round',
+      entity: 'Round',
+      entity_id: round.id,
+    });
+
+    res.status(201).json({ round });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const updateRound = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+    const { id } = req.params;
+    const { break_no, round_no, status, duration_minutes } = req.body;
+
+    const round = await Round.findByPk(id);
+    if (!round) {
+      return res.status(404).json({ message: 'Round not found' });
+    }
+
+    if (break_no !== undefined) round.break_no = break_no;
+    if (round_no !== undefined) round.round_no = round_no;
+    if (status !== undefined) round.status = status;
+
+    await round.save();
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'update_round',
+      entity: 'Round',
+      entity_id: round.id,
+    });
+
+    res.json({ round });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const deleteRound = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+    const { id } = req.params;
+
+    const round = await Round.findByPk(id);
+    if (!round) {
+      return res.status(404).json({ message: 'Round not found' });
+    }
+
+    // Delete associated matches first
+    await Match.destroy({ where: { round_id: id } });
+
+    await round.destroy();
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'delete_round',
+      entity: 'Round',
+      entity_id: id,
+    });
+
+    res.json({ message: 'Round deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, resetRounds, createRound, updateRound, deleteRound };

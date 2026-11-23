@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const { User, MenteeProfile, MentorProfile, Registration, Event, AuditLog } = require('../models');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
-const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml } = require('../utils/email');
+const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml, mentorApprovedEmailHtml } = require('../utils/email');
 const { generateQR } = require('../utils/qr');
 
 const { Op } = require('sequelize');
@@ -256,11 +256,13 @@ const verifyEmail = async (req, res) => {
 
     // For mentees: send digital ticket with QR Code
     if (user.role === 'mentee' && ticketCode) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const checkinUrl = `${frontendUrl}/checkin?ticket_code=${ticketCode}`;
       await sendEmail({
         to: email,
         subject: 'O seu bilhete digital - Career Connect',
         text: `O seu registo foi concluído. Bilhete: ${ticketCode}. Código curto: ${ticketCode}.`,
-        html: digitalTicketEmailHtml({ name: user.name, ticketCode, qrPayload }),
+        html: digitalTicketEmailHtml({ name: user.name, ticketCode, qrPayload, checkinUrl }),
       });
     }
 

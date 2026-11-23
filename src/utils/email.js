@@ -153,7 +153,66 @@ const forgotPasswordEmailHtml = ({ name, code }) => render(
   footerBand()
 );
 
-const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload }) => render(
+const mentorApprovedEmailHtml = ({ name, approved }) => render(
+  headerBand(approved ? 'Mentor Aprovado' : 'Mentor Rejeitado'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
+    ${approved ? `
+      <p style="margin: 0 0 24px;">A sua candidatura como mentor na ${BRAND} foi <strong>aprovada</strong>! Já pode entrar na sua área de mentor e começar a receber mentorados.</p>
+    ` : `
+      <p style="margin: 0 0 24px;">Lamentamos informar que a sua candidatura como mentor na ${BRAND} foi <strong>rejeitada</strong>. Se achar que foi um erro, entre em contacto com a equipa organizadora.</p>
+    `}
+  `),
+  footerBand()
+);
+
+const messageReceivedEmailHtml = ({ receiverName, senderName, preview, checkinUrl }) => render(
+  headerBand('Nova Mensagem'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${receiverName}!</h2>
+    <p style="margin: 0 0 16px;">Recebeu uma nova mensagem de <strong>${senderName}</strong> na ${BRAND}.</p>
+    <blockquote style="margin: 0 0 24px; padding: 16px 20px; background-color: ${SURFACE_SOFT}; border-left: 4px solid ${PRIMARY_500}; color: ${INK}; font-style: italic;">“${preview}”</blockquote>
+    ${checkinUrl ? `
+      <p style="margin: 0 0 24px;">Pode continuar a conversa na sua área pessoal.</p>
+    ` : ''}
+  `),
+  footerBand()
+);
+
+const mentorshipRequestReceivedEmailHtml = ({ mentorName, menteeName, message, checkinUrl }) => render(
+  headerBand('Novo Pedido de Mentoria'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${mentorName}!</h2>
+    <p style="margin: 0 0 16px;">${menteeName} enviou-lhe um pedido de mentoria na ${BRAND}.</p>
+    ${message ? `<blockquote style="margin: 0 0 24px; padding: 16px 20px; background-color: ${SURFACE_SOFT}; border-left: 4px solid ${PRIMARY_500}; color: ${INK}; font-style: italic;">“${message}”</blockquote>` : ''}
+    <p style="margin: 0 0 24px;">Aceda à sua área de mentor para aceitar ou recusar o pedido.</p>
+  `),
+  footerBand()
+);
+
+const mentorshipRequestRespondedEmailHtml = ({ menteeName, mentorName, status, checkinUrl }) => render(
+  headerBand(status === 'accepted' ? 'Pedido de Mentoria Aceite' : 'Pedido de Mentoria Recusado'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${menteeName}!</h2>
+    ${status === 'accepted' ? `
+      <p style="margin: 0 0 24px;">O mentor <strong>${mentorName}</strong> <strong>aceitou</strong> o seu pedido de mentoria na ${BRAND}. Já estão conectados e podem trocar mensagens.</p>
+    ` : `
+      <p style="margin: 0 0 24px;">O mentor <strong>${mentorName}</strong> <strong>recusou</strong> o seu pedido de mentoria na ${BRAND}. Pode continuar a explorar outros mentores.</p>
+    `}
+  `),
+  footerBand()
+);
+
+const connectionCreatedEmailHtml = ({ userName, contactName, contactRole, checkinUrl }) => render(
+  headerBand('Nova Ligação'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${userName}!</h2>
+    <p style="margin: 0 0 24px;">Está agora conectado com <strong>${contactName}</strong> (${contactRole}) na ${BRAND}. Pode começar a trocar mensagens na sua área de conexões.</p>
+  `),
+  footerBand()
+);
+
+const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload, checkinUrl }) => render(
   headerBand('O seu Bilhete Digital'),
   bodySection(`
     <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
@@ -173,20 +232,18 @@ const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload }) => render(
         </tr>
       ` : ''}
     </table>
+    ${checkinUrl ? `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin-top: 30px;">
+        <tr>
+          <td align="center" style="padding: 24px 30px; background-color: ${SURFACE_SOFT}; border-radius: 12px;">
+            <p style="margin: 0 0 12px; font-size: 14px; color: ${INK_MUTED}; font-weight: 600;">Check-in no evento</p>
+            <a href="${checkinUrl}" style="display: inline-block; background-color: ${PRIMARY_500}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 700; font-size: 15px;">Abrir página de check-in</a>
+            <p style="margin: 12px 0 0; font-size: 13px; color: ${INK_MUTED};">O organizador poderá confirmar a sua presença ao ler este QR code.</p>
+          </td>
+        </tr>
+      </table>
+    ` : ''}
     <p style="margin: 0; font-size: 14px;">Bem-vindo à ${BRAND}.</p>
-  `),
-  footerBand()
-);
-
-const mentorApprovedEmailHtml = ({ name, approved }) => render(
-  headerBand(approved ? 'Mentor Aprovado' : 'Mentor Rejeitado'),
-  bodySection(`
-    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
-    ${approved ? `
-      <p style="margin: 0 0 24px;">A sua candidatura como mentor na ${BRAND} foi <strong>aprovada</strong>! Já pode entrar na sua área de mentor e começar a receber mentorados.</p>
-    ` : `
-      <p style="margin: 0 0 24px;">Lamentamos informar que a sua candidatura como mentor na ${BRAND} foi <strong>rejeitada</strong>. Se achar que foi um erro, entre em contacto com a equipa organizadora.</p>
-    `}
   `),
   footerBand()
 );
@@ -199,4 +256,8 @@ module.exports = {
   forgotPasswordEmailHtml,
   digitalTicketEmailHtml,
   mentorApprovedEmailHtml,
+  messageReceivedEmailHtml,
+  mentorshipRequestReceivedEmailHtml,
+  mentorshipRequestRespondedEmailHtml,
+  connectionCreatedEmailHtml,
 };

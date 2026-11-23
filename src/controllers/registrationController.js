@@ -182,4 +182,29 @@ const getRegistrations = async (req, res) => {
   }
 };
 
-module.exports = { registerForEvent, checkIn, walkIn, cancelCheckIn, getRegistrations };
+const deleteRegistration = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+    const { id } = req.params;
+
+    const registration = await Registration.findByPk(id);
+    if (!registration) {
+      return res.status(404).json({ message: 'Registration not found' });
+    }
+
+    await registration.destroy();
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'delete_registration',
+      entity: 'Registration',
+      entity_id: id,
+    });
+
+    res.json({ message: 'Registration deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { registerForEvent, checkIn, walkIn, cancelCheckIn, getRegistrations, deleteRegistration };

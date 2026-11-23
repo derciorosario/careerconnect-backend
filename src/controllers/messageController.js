@@ -1,5 +1,6 @@
 'use strict';
 const { Message, Connection, User } = require('../models');
+const { sendEmail, messageReceivedEmailHtml } = require('../utils/email');
 
 const getMessages = async (req, res) => {
   try {
@@ -43,6 +44,29 @@ const sendMessage = async (req, res) => {
     const msg = await Message.findByPk(message.id, {
       include: [{ model: User, as: 'fromUser', attributes: ['id', 'name', 'photo_url'] }],
     });
+
+    // Determine receiver (the other user in the connection)
+    const receiverId = connection.user_a === fromUserId ? connection.user_b : connection.user_a;
+    const receiver = await User.findByPk(receiverId, { attributes: ['id', 'name', 'email'] });
+    const sender = await User.findByPk(fromUserId, { attributes: ['id', 'name'] });
+
+    if (receiver && receiver.email) {
+      try {
+        const preview = body.length > 60 ? body.slice(0, 60) + '…' : body;
+        sendEmail({
+          to: receiver.email,
+          subject: `Nova mensagem de ${sender.name} - Career Connect`,
+          text: `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name}: ${preview}`,
+          html: messageReceivedEmailHtml({
+            receiverName: receiver.name,
+            senderName: sender.name,
+            preview,
+          }),
+        });
+      } catch (emailErr) {
+        console.error('Failed to send message email:', emailErr.message);
+      }
+    }
 
     res.status(201).json({ message: msg });
   } catch (err) {
