@@ -49,7 +49,7 @@ const register = async (req, res) => {
     if (role === 'mentee') {
       await MenteeProfile.create({
         user_id: user.id,
-        level: level || '',
+        level: level == "Recém-graduado" ? 'recem_graduado' :  level == "Estudante" ? 'estudante' : level,
         course: course || '',
         institution: institution || '',
         interests: interests || [],

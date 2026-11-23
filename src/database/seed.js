@@ -199,7 +199,7 @@ const {
     });
     await MenteeProfile.create({
       user_id: mentee2.id,
-      level: 'Recém-graduado',
+      level: 'recem_graduado',
       course: 'Engenharia Informática',
       institution: 'ISCTEM',
       interests: ['Tecnologia e TI', 'Engenharia'],
@@ -275,7 +275,7 @@ const {
     });
     await MenteeProfile.create({
       user_id: mentee6.id,
-      level: 'Recém-graduado',
+      level: 'recem_graduado',
       course: 'Marketing',
       institution: 'ISCIM',
       interests: ['Marketing e Comunicação'],
