@@ -52,6 +52,9 @@ const advanceRound = async (req, res) => {
     if (nextRound) {
       nextRound.status = 'running';
       nextRound.started_at = new Date();
+      const event = await Event.findByPk(event_id);
+      const durationMinutes = event ? event.round_minutes : 5;
+      nextRound.ends_at = new Date(Date.now() + durationMinutes * 60 * 1000);
       await nextRound.save();
 
       await AuditLog.create({

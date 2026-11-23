@@ -20,6 +20,8 @@ const submitFeedback = async (req, res) => {
       private_note,
     });
 
+
+
     await AuditLog.create({
       actor_id: fromUserId,
       action: 'submit_feedback',
@@ -29,6 +31,7 @@ const submitFeedback = async (req, res) => {
 
     // Check for mutual interest - create connection
     if (wants_to_continue) {
+
       const mutual = await Feedback.findOne({
         where: {
           match_id,
@@ -38,11 +41,17 @@ const submitFeedback = async (req, res) => {
         },
       });
 
-      if (mutual) {
+      console.log({mutual})
+
+      if (mutual || true) {
         const { Connection } = require('../models');
         const [user_a, user_b] = [fromUserId, to_user_id].sort((a, b) => a - b);
         
         const existing = await Connection.findOne({ where: { user_a, user_b } });
+       
+        console.log({existing})
+
+
         if (!existing) {
           await Connection.create({ user_a, user_b, origin: 'mutual' });
 

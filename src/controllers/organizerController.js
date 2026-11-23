@@ -63,6 +63,11 @@ const getRegistrations = async (req, res) => {
           as: 'user',
           where: role ? { role } : {},
           attributes: ['id', 'name', 'email', 'phone', 'role'],
+          include: [{
+            model: MentorProfile,
+            as: 'mentorProfile',
+            attributes: ['approval'],
+          }],
         },
         { model: Event, as: 'event' },
       ],
@@ -92,7 +97,7 @@ const approveMentor = async (req, res) => {
     const user = await User.findByPk(mentor_id);
     if (user) {
       try {
-        await sendEmail({
+         sendEmail({
           to: user.email,
           subject: action === 'approve' ? 'Mentor aprovado - Career Connect' : 'Candidatura de mentor - Career Connect',
           text: `Olá ${user.name}, a sua candidatura de mentor foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
