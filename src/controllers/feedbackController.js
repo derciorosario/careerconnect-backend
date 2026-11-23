@@ -53,13 +53,13 @@ const submitFeedback = async (req, res) => {
 
 
         if (!existing) {
-          await Connection.create({ user_a, user_b, origin: 'mutual' });
+          const connection = await Connection.create({ user_a, user_b, origin: 'mutual' });
 
           await AuditLog.create({
             actor_id: fromUserId,
             action: 'create_connection',
             entity: 'Connection',
-            entity_id: user_a + '-' + user_b,
+            entity_id: connection.id,
           });
         }
       }
