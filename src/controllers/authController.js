@@ -415,4 +415,21 @@ const me = async (req, res) => {
   }
 };
 
-module.exports = { register, login, requestOTP, verifyOTP, verifyEmail, resendEmailOTP, forgotPassword, resetPassword, refreshToken, me };
+const getTestUsers = async (req, res) => {
+  try {
+    const { User } = require('../models');
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'role'],
+      order: [['role', 'ASC'], ['name', 'ASC']],
+    });
+    const withPassword = users.map((u) => ({
+      ...u.toJSON ? u.toJSON() : u,
+      testPassword: u.role === 'organizer' ? 'Organizer123!' : u.role === 'mentor' ? 'Mentor123!' : 'Mentee123!',
+    }));
+    res.json({ users: withPassword });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { register, login, requestOTP, verifyOTP, verifyEmail, resendEmailOTP, forgotPassword, resetPassword, refreshToken, me, getTestUsers };

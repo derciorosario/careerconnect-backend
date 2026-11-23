@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const {
-  register, login, requestOTP, verifyOTP, verifyEmail, resendEmailOTP, forgotPassword, resetPassword, refreshToken, me,
+  register, login, requestOTP, verifyOTP, verifyEmail, resendEmailOTP, forgotPassword, resetPassword, refreshToken, me, getTestUsers,
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
@@ -45,5 +45,6 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/refresh-token', refreshToken);
 router.get('/me', authenticate, me);
+router.get('/test-users', getTestUsers);
 
 module.exports = router;

@@ -4,6 +4,7 @@ const {
   Connection, MentorshipRequest, SurveyResponse, Event, AuditLog,
 } = require('../models');
 const { Op } = require('sequelize');
+const { sendEmail, mentorApprovedEmailHtml } = require('../utils/email');
 
 const getDashboard = async (req, res) => {
   try {
@@ -87,6 +88,20 @@ const approveMentor = async (req, res) => {
     profile.approved_by = organizerId;
     profile.approved_at = new Date();
     await profile.save();
+
+    const user = await User.findByPk(mentor_id);
+    if (user) {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: action === 'approve' ? 'Mentor aprovado - Career Connect' : 'Candidatura de mentor - Career Connect',
+          text: `Olá ${user.name}, a sua candidatura de mentor foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
+          html: mentorApprovedEmailHtml({ name: user.name, approved: action === 'approve' }),
+        });
+      } catch (emailErr) {
+        console.error('Failed to send mentor approval email:', emailErr.message);
+      }
+    }
 
     await AuditLog.create({
       actor_id: organizerId,

@@ -162,4 +162,39 @@ const getCurrentRound = async (req, res) => {
   }
 };
 
-module.exports = { getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound };
+const resetRounds = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+    const event_id = await resolveEventId(req.body.event_id);
+
+    if (!event_id) {
+      return res.status(400).json({ message: 'No active event found.' });
+    }
+
+    // Reset all rounds to planned
+    await Round.update(
+      { status: 'planned', started_at: null, ends_at: null, paused_remaining: null },
+      { where: { event_id } }
+    );
+
+    // Clear all matches for this event's rounds
+    const rounds = await Round.findAll({ where: { event_id } });
+    const roundIds = rounds.map((r) => r.id);
+    if (roundIds.length > 0) {
+      await Match.destroy({ where: { round_id: roundIds } });
+    }
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'reset_rounds',
+      entity: 'Round',
+      entity_id: event_id,
+    });
+
+    res.json({ message: 'Rounds reset successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, resetRounds };

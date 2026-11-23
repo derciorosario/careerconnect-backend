@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const { sequelize } = require('../config/db');
 const db = require('../models');
 
+const BASIC_SEED = false; // Set to false to seed everything
+
 const {
   User, MentorProfile, MenteeProfile, Event, Session, Registration, Round,
   Speaker, Booking, Wish, Match, Feedback, Connection, MentorshipRequest,
@@ -22,7 +24,7 @@ const {
 
     const salt = await bcrypt.genSalt(10);
 
-    // ── USERS ──────────────────────────────────────────────
+    // ── USERS (always created, even in BASIC_SEED) ──────────────
     const organizer = await User.create({
       name: 'Organizador Career Connect',
       email: 'organizador@careerconnect.co.mz',
@@ -74,7 +76,7 @@ const {
       pitch: 'Estudante do último ano à procura de orientação de carreira.',
     });
 
-    // Additional mentors
+    // Additional mentors (always created)
     const mentor2 = await User.create({
       name: 'Sara Cumbe',
       email: 'sara@careerconnect.co.mz',
@@ -185,7 +187,7 @@ const {
       approval: 'approved',
     });
 
-    // Additional mentees
+    // Additional mentees (always created)
     const mentee2 = await User.create({
       name: 'Bruno Chissano',
       email: 'bruno@careerconnect.co.mz',
@@ -296,7 +298,7 @@ const {
       match_weights: { areas: 45, goal: 20, sector: 10, want: 15, variety: 10 },
     });
 
-    // ── SESSIONS ────────────────────────────────────────────
+    // ── SESSIONS (always created) ────────────────────────────
     const session1 = await Session.create({
       event_id: event.id,
       order: 1,
@@ -333,50 +335,7 @@ const {
       starts_at: new Date('2026-12-04T17:00:00+02:00'),
     });
 
-    // ── SPEAKERS ────────────────────────────────────────────
-    await Speaker.create({
-      event_id: event.id,
-      session_id: session1.id,
-      name: 'Carlos Tembe',
-      role: 'Engenheiro de Software',
-      company: 'TechSolutions',
-      topic: 'Estratégias para encontrar o primeiro passo',
-      bio: 'Engenheiro com 10 anos de experiência em desenvolvimento de software.',
-      user_id: mentorUser.id,
-    });
-    await Speaker.create({
-      event_id: event.id,
-      session_id: session3.id,
-      name: 'Sara Cumbe',
-      role: 'Directora de Finanças',
-      company: 'Standard Bank',
-      topic: 'A arte de criar redes de contactos',
-      bio: 'Directora de Finanças com 8 anos de experiência no setor bancário.',
-      user_id: mentor2.id,
-    });
-    await Speaker.create({
-      event_id: event.id,
-      session_id: session5.id,
-      name: 'Rui Machava',
-      role: 'Director de RH',
-      company: 'Vale Moçambique',
-      topic: 'O próximo passo depois da contratação',
-      bio: 'Director de Recursos Humanos com experiência em recrutamento e desenvolvimento de carreira.',
-      user_id: mentor5.id,
-    });
-
-    // ── REGISTRATIONS ───────────────────────────────────────
-    const allUsers = [organizer, mentorUser, menteeUser, mentor2, mentor3, mentor4, mentor5, mentor6, mentee2, mentee3, mentee4, mentee5, mentee6];
-    for (const user of allUsers) {
-      await Registration.create({
-        event_id: event.id,
-        user_id: user.id,
-        ticket_code: 'CC-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
-        status: 'registered',
-      });
-    }
-
-    // ── ROUNDS ──────────────────────────────────────────────
+    // ── ROUNDS (always created, all "planned" in BASIC_SEED) ──
     const rounds = [];
     for (let b = 1; b <= 2; b++) {
       for (let r = 1; r <= 4; r++) {
@@ -384,245 +343,288 @@ const {
           event_id: event.id,
           break_no: b,
           round_no: r,
-          status: r <= 3 ? 'done' : 'planned',
+          status: 'planned' // BASIC_SEED ? 'planned' : r <= 3 ? 'done' : 'planned',
         });
         rounds.push(round);
       }
     }
 
-    // ── BOOKINGS (mentees booking sessions) ─────────────────
-    const mentees = [menteeUser, mentee2, mentee3, mentee4, mentee5, mentee6];
-    const masterclassSessions = [session1, session3, session5];
-    for (const mentee of mentees) {
-      for (const session of masterclassSessions) {
-        await Booking.create({
-          user_id: mentee.id,
-          session_id: session.id,
-        });
-      }
-    }
+    if (!BASIC_SEED) {
+      // ── SPEAKERS ────────────────────────────────────────────
+      await Speaker.create({
+        event_id: event.id,
+        session_id: session1.id,
+        name: 'Carlos Tembe',
+        role: 'Engenheiro de Software',
+        company: 'TechSolutions',
+        topic: 'Estratégias para encontrar o primeiro passo',
+        bio: 'Engenheiro com 10 anos de experiência em desenvolvimento de software.',
+        user_id: mentorUser.id,
+      });
+      await Speaker.create({
+        event_id: event.id,
+        session_id: session3.id,
+        name: 'Sara Cumbe',
+        role: 'Directora de Finanças',
+        company: 'Standard Bank',
+        topic: 'A arte de criar redes de contactos',
+        bio: 'Directora de Finanças com 8 anos de experiência no setor bancário.',
+        user_id: mentor2.id,
+      });
+      await Speaker.create({
+        event_id: event.id,
+        session_id: session5.id,
+        name: 'Rui Machava',
+        role: 'Director de RH',
+        company: 'Vale Moçambique',
+        topic: 'O próximo passo depois da contratação',
+        bio: 'Director de Recursos Humanos com experiência em recrutamento e desenvolvimento de carreira.',
+        user_id: mentor5.id,
+      });
 
-    // ── WISHES (mentees wishing for mentors) ────────────────
-    const mentors = [mentorUser, mentor2, mentor3, mentor5, mentor6];
-    for (const mentee of mentees) {
-      // Each mentee wishes for 2-3 mentors
-      const numWishes = Math.min(3, mentors.length);
-      for (let i = 0; i < numWishes; i++) {
-        const mentor = mentors[i % mentors.length];
-        await Wish.create({
-          mentee_id: mentee.id,
-          mentor_id: mentor.id,
+      // ── REGISTRATIONS ───────────────────────────────────────
+      const allUsers = [organizer, mentorUser, menteeUser, mentor2, mentor3, mentor4, mentor5, mentor6, mentee2, mentee3, mentee4, mentee5, mentee6];
+      for (const user of allUsers) {
+        await Registration.create({
           event_id: event.id,
+          user_id: user.id,
+          ticket_code: 'CC-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+          status: 'registered',
         });
       }
-    }
 
-    // ── MATCHES (round matches) ─────────────────────────────
-    for (let i = 0; i < rounds.length; i++) {
-      const round = rounds[i];
-      if (round.status === 'done') {
-        // Each mentee matched with a mentor
-        for (let j = 0; j < mentees.length; j++) {
-          const mentee = mentees[j];
-          const mentor = mentors[j % mentors.length];
-          await Match.create({
-            round_id: round.id,
-            table_no: (j % 10) + 1,
-            mentor_id: mentor.id,
-            mentee_ids: [mentee.id],
-            score: Math.floor(Math.random() * 40) + 60,
+      // ── BOOKINGS (mentees booking sessions) ─────────────────
+      const mentees = [menteeUser, mentee2, mentee3, mentee4, mentee5, mentee6];
+      const masterclassSessions = [session1, session3, session5];
+      for (const mentee of mentees) {
+        for (const session of masterclassSessions) {
+          await Booking.create({
+            user_id: mentee.id,
+            session_id: session.id,
           });
         }
       }
-    }
 
-    // ── FEEDBACK (after completed matches) ──────────────────
-    const completedRounds = rounds.filter((r) => r.status === 'done');
-    const matches = [];
-    for (const round of completedRounds) {
-      const roundMatches = await Match.findAll({ where: { round_id: round.id } });
-      matches.push(...roundMatches);
-    }
-    for (const match of matches) {
-      await Feedback.create({
-        match_id: match.id,
-        from_user_id: match.mentee_ids[0],
-        to_user_id: match.mentor_id,
-        wants_to_continue: Math.random() > 0.3,
-        usefulness: Math.floor(Math.random() * 5) + 1,
-        private_note: 'Boa conversa, aprendi muito.',
+      // ── WISHES (mentees wishing for mentors) ────────────────
+      const mentors = [mentorUser, mentor2, mentor3, mentor5, mentor6];
+      for (const mentee of mentees) {
+        const numWishes = Math.min(3, mentors.length);
+        for (let i = 0; i < numWishes; i++) {
+          const mentor = mentors[i % mentors.length];
+          await Wish.create({
+            mentee_id: mentee.id,
+            mentor_id: mentor.id,
+            event_id: event.id,
+          });
+        }
+      }
+
+      // ── MATCHES (round matches) ─────────────────────────────
+      for (let i = 0; i < rounds.length; i++) {
+        const round = rounds[i];
+        if (round.status === 'done') {
+          for (let j = 0; j < mentees.length; j++) {
+            const mentee = mentees[j];
+            const mentor = mentors[j % mentors.length];
+            await Match.create({
+              round_id: round.id,
+              table_no: (j % 10) + 1,
+              mentor_id: mentor.id,
+              mentee_ids: [mentee.id],
+              score: Math.floor(Math.random() * 40) + 60,
+            });
+          }
+        }
+      }
+
+      // ── FEEDBACK (after completed matches) ──────────────────
+      const completedRounds = rounds.filter((r) => r.status === 'done');
+      const matches = [];
+      for (const round of completedRounds) {
+        const roundMatches = await Match.findAll({ where: { round_id: round.id } });
+        matches.push(...roundMatches);
+      }
+      for (const match of matches) {
+        await Feedback.create({
+          match_id: match.id,
+          from_user_id: match.mentee_ids[0],
+          to_user_id: match.mentor_id,
+          wants_to_continue: Math.random() > 0.3,
+          usefulness: Math.floor(Math.random() * 5) + 1,
+          private_note: 'Boa conversa, aprendi muito.',
+        });
+      }
+
+      // ── CONNECTIONS (mutual connections) ────────────────────
+      for (let i = 0; i < mentees.length; i++) {
+        const mentee = mentees[i];
+        const mentor = mentors[i % mentors.length];
+        await Connection.create({
+          user_a: mentee.id,
+          user_b: mentor.id,
+          origin: 'mutual',
+        });
+      }
+
+      // ── MENTORSHIP REQUESTS ─────────────────────────────────
+      await MentorshipRequest.create({
+        mentee_id: menteeUser.id,
+        mentor_id: mentorUser.id,
+        status: 'accepted',
+        message: 'Olá Carlos, gostava de ter o teu apoio como mentor.',
+        decided_at: new Date(),
       });
-    }
-
-    // ── CONNECTIONS (mutual connections) ────────────────────
-    for (let i = 0; i < mentees.length; i++) {
-      const mentee = mentees[i];
-      const mentor = mentors[i % mentors.length];
-      await Connection.create({
-        user_a: mentee.id,
-        user_b: mentor.id,
-        origin: 'mutual',
+      await MentorshipRequest.create({
+        mentee_id: mentee2.id,
+        mentor_id: mentor2.id,
+        status: 'pending',
+        message: 'Olá Sara, gostava de ter o teu apoio como mentor.',
       });
-    }
-
-    // ── MENTORSHIP REQUESTS ─────────────────────────────────
-    await MentorshipRequest.create({
-      mentee_id: menteeUser.id,
-      mentor_id: mentorUser.id,
-      status: 'accepted',
-      message: 'Olá Carlos, gostava de ter o teu apoio como mentor.',
-      decided_at: new Date(),
-    });
-    await MentorshipRequest.create({
-      mentee_id: mentee2.id,
-      mentor_id: mentor2.id,
-      status: 'pending',
-      message: 'Olá Sara, gostava de ter o teu apoio como mentor.',
-    });
-    await MentorshipRequest.create({
-      mentee_id: mentee3.id,
-      mentor_id: mentor5.id,
-      status: 'declined',
-      message: 'Olá Rui, gostava de ter o teu apoio.',
-      decided_at: new Date(),
-    });
-
-    // ── MESSAGES (within connections) ───────────────────────
-    const connections = await Connection.findAll();
-    for (const conn of connections) {
-      await Message.create({
-        connection_id: conn.id,
-        from_user_id: conn.user_a,
-        body: 'Olá! Foi bom conhecer-te no evento.',
-        read_at: new Date(),
+      await MentorshipRequest.create({
+        mentee_id: mentee3.id,
+        mentor_id: mentor5.id,
+        status: 'declined',
+        message: 'Olá Rui, gostava de ter o teu apoio.',
+        decided_at: new Date(),
       });
-      await Message.create({
-        connection_id: conn.id,
-        from_user_id: conn.user_b,
-        body: 'Olá! Também gostei de falar contigo.',
-        read_at: new Date(),
+
+      // ── MESSAGES (within connections) ───────────────────────
+      const connections = await Connection.findAll();
+      for (const conn of connections) {
+        await Message.create({
+          connection_id: conn.id,
+          from_user_id: conn.user_a,
+          body: 'Olá! Foi bom conhecer-te no evento.',
+          read_at: new Date(),
+        });
+        await Message.create({
+          connection_id: conn.id,
+          from_user_id: conn.user_b,
+          body: 'Olá! Também gostei de falar contigo.',
+          read_at: new Date(),
+        });
+      }
+
+      // ── QUESTIONS (for sessions) ────────────────────────────
+      for (const session of [session1, session3, session5]) {
+        await Question.create({
+          session_id: session.id,
+          user_id: menteeUser.id,
+          body: 'Como posso destacar o meu CV para a primeira vaga?',
+          anonymous: false,
+          status: 'visible',
+          projected: false,
+        });
+        await Question.create({
+          session_id: session.id,
+          user_id: mentee2.id,
+          body: 'Quais habilidades são mais valorizadas no mercado atual?',
+          anonymous: true,
+          status: 'visible',
+          projected: false,
+        });
+      }
+
+      // ── POLLS (for sessions) ────────────────────────────────
+      const poll = await Poll.create({
+        session_id: session2.id,
+        question: 'Maior obstáculo na busca de emprego?',
+        options: ['Falta de experiência', 'Falta de contactos', 'Falta de formação', 'Outro'],
       });
-    }
 
-    // ── QUESTIONS (for sessions) ────────────────────────────
-    for (const session of [session1, session3, session5]) {
-      await Question.create({
-        session_id: session.id,
-        user_id: menteeUser.id,
-        body: 'Como posso destacar o meu CV para a primeira vaga?',
-        anonymous: false,
-        status: 'visible',
-        projected: false,
-      });
-      await Question.create({
-        session_id: session.id,
-        user_id: mentee2.id,
-        body: 'Quais habilidades são mais valorizadas no mercado atual?',
-        anonymous: true,
-        status: 'visible',
-        projected: false,
-      });
-    }
+      // ── POLL VOTES ──────────────────────────────────────────
+      const { PollVote } = db;
+      for (const mentee of mentees) {
+        await PollVote.create({
+          poll_id: poll.id,
+          user_id: mentee.id,
+          option_index: Math.floor(Math.random() * 4),
+        });
+      }
 
-    // ── POLLS (for sessions) ────────────────────────────────
-    const poll = await Poll.create({
-      session_id: session2.id,
-      question: 'Maior obstáculo na busca de emprego?',
-      options: ['Falta de experiência', 'Falta de contactos', 'Falta de formação', 'Outro'],
-    });
-
-    // ── POLL VOTES ──────────────────────────────────────────
-    const { PollVote } = db;
-    for (const mentee of mentees) {
-      await PollVote.create({
-        poll_id: poll.id,
-        user_id: mentee.id,
-        option_index: Math.floor(Math.random() * 4),
-      });
-    }
-
-    // ── ANNOUNCEMENTS ───────────────────────────────────────
-    await Announcement.create({
-      event_id: event.id,
-      body: 'Bem-vindos ao Career Connect 2026! O evento começa às 14H00.',
-      sent_by: organizer.id,
-      sent_at: new Date(),
-    });
-    await Announcement.create({
-      event_id: event.id,
-      body: 'O intervalo de networking começa daqui a 10 minutos. Dirigam-se às mesas.',
-      sent_by: organizer.id,
-      sent_at: new Date(),
-    });
-
-    // ── NOTIFICATIONS ───────────────────────────────────────
-    for (const user of allUsers) {
-      await Notification.create({
-        user_id: user.id,
-        channel: 'app',
-        template: 'welcome',
-        payload: { event: 'Career Connect 2026' },
-        status: 'sent',
+      // ── ANNOUNCEMENTS ───────────────────────────────────────
+      await Announcement.create({
+        event_id: event.id,
+        body: 'Bem-vindos ao Career Connect 2026! O evento começa às 14H00.',
+        sent_by: organizer.id,
         sent_at: new Date(),
       });
-    }
-
-    // ── SURVEY RESPONSES ────────────────────────────────────
-    for (const user of allUsers) {
-      await SurveyResponse.create({
-        user_id: user.id,
+      await Announcement.create({
         event_id: event.id,
-        rating: Math.floor(Math.random() * 3) + 3,
-        nps: Math.floor(Math.random() * 11),
-        comment: 'Evento muito útil para a minha carreira.',
+        body: 'O intervalo de networking começa daqui a 10 minutos. Dirigam-se às mesas.',
+        sent_by: organizer.id,
+        sent_at: new Date(),
+      });
+
+      // ── NOTIFICATIONS ───────────────────────────────────────
+      for (const user of allUsers) {
+        await Notification.create({
+          user_id: user.id,
+          channel: 'app',
+          template: 'welcome',
+          payload: { event: 'Career Connect 2026' },
+          status: 'sent',
+          sent_at: new Date(),
+        });
+      }
+
+      // ── SURVEY RESPONSES ────────────────────────────────────
+      for (const user of allUsers) {
+        await SurveyResponse.create({
+          user_id: user.id,
+          event_id: event.id,
+          rating: Math.floor(Math.random() * 3) + 3,
+          nps: Math.floor(Math.random() * 11),
+          comment: 'Evento muito útil para a minha carreira.',
+        });
+      }
+
+      // ── NEXT STEPS ──────────────────────────────────────────
+      for (const mentee of mentees) {
+        await NextStep.create({
+          user_id: mentee.id,
+          text: 'Enviar CV para pelo menos 3 empresas esta semana.',
+          due_date: new Date('2026-12-11T00:00:00+02:00'),
+        });
+        await NextStep.create({
+          user_id: mentee.id,
+          text: 'Atualizar perfil do LinkedIn com novas competências.',
+          due_date: new Date('2026-12-18T00:00:00+02:00'),
+        });
+      }
+
+      // ── BADGES ──────────────────────────────────────────────
+      await Badge.create({
+        user_id: menteeUser.id,
+        code: 'PRIMEIRA_LIGACAO',
+      });
+      await Badge.create({
+        user_id: menteeUser.id,
+        code: 'MEIO_CAMINHO',
+      });
+      await Badge.create({
+        user_id: mentee2.id,
+        code: 'PRIMEIRA_LIGACAO',
+      });
+      await Badge.create({
+        user_id: mentorUser.id,
+        code: 'MENTORIA_ATIVA',
+      });
+
+      // ── AUDIT LOGS ──────────────────────────────────────────
+      await AuditLog.create({
+        actor_id: organizer.id,
+        action: 'create_event',
+        entity: 'Event',
+        entity_id: event.id,
+      });
+      await AuditLog.create({
+        actor_id: menteeUser.id,
+        action: 'register',
+        entity: 'Registration',
+        entity_id: menteeUser.id,
       });
     }
-
-    // ── NEXT STEPS ──────────────────────────────────────────
-    for (const mentee of mentees) {
-      await NextStep.create({
-        user_id: mentee.id,
-        text: 'Enviar CV para pelo menos 3 empresas esta semana.',
-        due_date: new Date('2026-12-11T00:00:00+02:00'),
-      });
-      await NextStep.create({
-        user_id: mentee.id,
-        text: 'Atualizar perfil do LinkedIn com novas competências.',
-        due_date: new Date('2026-12-18T00:00:00+02:00'),
-      });
-    }
-
-    // ── BADGES ──────────────────────────────────────────────
-    await Badge.create({
-      user_id: menteeUser.id,
-      code: 'PRIMEIRA_LIGACAO',
-    });
-    await Badge.create({
-      user_id: menteeUser.id,
-      code: 'MEIO_CAMINHO',
-    });
-    await Badge.create({
-      user_id: mentee2.id,
-      code: 'PRIMEIRA_LIGACAO',
-    });
-    await Badge.create({
-      user_id: mentorUser.id,
-      code: 'MENTORIA_ATIVA',
-    });
-
-    // ── AUDIT LOGS ──────────────────────────────────────────
-    await AuditLog.create({
-      actor_id: organizer.id,
-      action: 'create_event',
-      entity: 'Event',
-      entity_id: event.id,
-    });
-    await AuditLog.create({
-      actor_id: menteeUser.id,
-      action: 'register',
-      entity: 'Registration',
-      entity_id: menteeUser.id,
-    });
 
     console.log('Seed data created successfully.');
     console.log('');
@@ -631,19 +633,21 @@ const {
     console.log('  Mentor:    carlos@careerconnect.co.mz / Mentor123!');
     console.log('  Mentee:    ana@careerconnect.co.mz / Mentee123!');
     console.log('');
-    console.log('Additional mentors:');
-    console.log('  sara@careerconnect.co.mz / Mentor123!');
-    console.log('  nuno@careerconnect.co.mz / Mentor123!');
-    console.log('  ilda@careerconnect.co.mz / Mentor123! (pending approval)');
-    console.log('  rui@careerconnect.co.mz / Mentor123!');
-    console.log('  lidia@careerconnect.co.mz / Mentor123!');
-    console.log('');
-    console.log('Additional mentees:');
-    console.log('  bruno@careerconnect.co.mz / Mentee123!');
-    console.log('  claudia@careerconnect.co.mz / Mentee123!');
-    console.log('  dino@careerconnect.co.mz / Mentee123!');
-    console.log('  elsa@careerconnect.co.mz / Mentee123!');
-    console.log('  fatima@careerconnect.co.mz / Mentee123!');
+    if (!BASIC_SEED) {
+      console.log('Additional mentors:');
+      console.log('  sara@careerconnect.co.mz / Mentor123!');
+      console.log('  nuno@careerconnect.co.mz / Mentor123!');
+      console.log('  ilda@careerconnect.co.mz / Mentor123! (pending approval)');
+      console.log('  rui@careerconnect.co.mz / Mentor123!');
+      console.log('  lidia@careerconnect.co.mz / Mentor123!');
+      console.log('');
+      console.log('Additional mentees:');
+      console.log('  bruno@careerconnect.co.mz / Mentee123!');
+      console.log('  claudia@careerconnect.co.mz / Mentee123!');
+      console.log('  dino@careerconnect.co.mz / Mentee123!');
+      console.log('  elsa@careerconnect.co.mz / Mentee123!');
+      console.log('  fatima@careerconnect.co.mz / Mentee123!');
+    }
 
     process.exit(0);
   } catch (err) {
