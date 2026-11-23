@@ -178,4 +178,31 @@ const deleteQuestion = async (req, res) => {
   }
 };
 
-module.exports = { getQuestions, createQuestion, voteQuestion, moderateQuestion, updateQuestion, deleteQuestion };
+const deleteAllQuestions = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+
+    const questions = await Question.findAll();
+    const count = questions.length;
+
+    if (count === 0) {
+      return res.json({ message: 'No questions to delete' });
+    }
+
+    await Question.destroy({ where: {} });
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'delete_all_questions',
+      entity: 'Question',
+      entity_id: 'all',
+      metadata: { deletedCount: count },
+    });
+
+    res.json({ message: `${count} questions deleted successfully` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getQuestions, createQuestion, voteQuestion, moderateQuestion, updateQuestion, deleteQuestion, deleteAllQuestions };

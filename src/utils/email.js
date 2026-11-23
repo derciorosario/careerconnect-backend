@@ -224,7 +224,7 @@ const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload, checkinUrl }) => 
       <tr>
         <td style="padding: 4px 0 16px; font-size: 18px; font-weight: 700; color: ${NAVY_900}; letter-spacing: 2px;">${ticketCode}</td>
       </tr>
-      ${qrPayload ? `
+      ${false ? `
         <tr>
           <td align="center" style="padding: 16px 0;">
             <img src="${qrPayload}" alt="QR Code" style="display: block; max-width: 200px; width: 100%; height: auto; border-radius: 8px;" />

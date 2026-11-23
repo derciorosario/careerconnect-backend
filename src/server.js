@@ -21,6 +21,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/events', require('./routes/events'));
+app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/registrations', require('./routes/registrations'));
 app.use('/api/rounds', require('./routes/rounds'));
 app.use('/api/matches', require('./routes/matches'));
