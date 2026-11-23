@@ -5,15 +5,13 @@ const { Op } = require('sequelize');
 const getMentorDirectory = async (req, res) => {
   try {
     const { area } = req.query;
-    const where = { approval: 'approved' };
-    
     const mentors = await User.findAll({
       where: { role: 'mentor' },
       include: [
         {
           model: MentorProfile,
           as: 'mentorProfile',
-          where: area ? { interests: { [Op.contains]: [area] } } : {},
+          where: { approval: 'approved', ...(area ? { interests: { [Op.contains]: [area] } } : {}) },
           required: true,
         },
       ],

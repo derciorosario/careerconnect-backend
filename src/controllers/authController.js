@@ -39,7 +39,7 @@ const register = async (req, res) => {
       role,
       password_hash,
       password_salt: salt,
-      photo_url: photo || null,
+      photo_url: req.file ? `/uploads/${req.file.filename}` : (photo || null),
       linkedin_url: linkedin || null,
       consent_at: new Date(),
       consent_version: '1.0',
