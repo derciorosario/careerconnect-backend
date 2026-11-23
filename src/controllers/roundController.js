@@ -1,6 +1,16 @@
 'use strict';
-const { Round, Match, Registration, User, MentorProfile, AuditLog } = require('../models');
+const { Round, Match, Registration, User, MentorProfile, AuditLog, Event } = require('../models');
 const { Op } = require('sequelize');
+
+// Resolve the active event when event_id is not explicitly provided.
+const resolveEventId = async (explicit) => {
+  if (explicit) return explicit;
+  const active = await Event.findOne({
+    where: { status: { [Op.notIn]: ['finished', 'closed'] } },
+    order: [['starts_at', 'DESC']],
+  });
+  return active ? active.id : null;
+};
 
 const getRounds = async (req, res) => {
   try {
@@ -15,8 +25,12 @@ const getRounds = async (req, res) => {
 
 const advanceRound = async (req, res) => {
   try {
-    const { event_id } = req.body;
     const organizerId = req.userId;
+    const event_id = await resolveEventId(req.body.event_id);
+
+    if (!event_id) {
+      return res.status(400).json({ message: 'No active event found.' });
+    }
 
     const current = await Round.findOne({
       where: { event_id, status: 'running' },
@@ -58,10 +72,22 @@ const advanceRound = async (req, res) => {
 
 const pauseRound = async (req, res) => {
   try {
-    const { round_id } = req.body;
     const organizerId = req.userId;
 
-    const round = await Round.findByPk(round_id);
+    let round;
+    if (req.body.round_id) {
+      round = await Round.findByPk(req.body.round_id);
+    } else {
+      const event_id = await resolveEventId(req.body.event_id);
+      if (!event_id) {
+        return res.status(400).json({ message: 'No active event found.' });
+      }
+      round = await Round.findOne({
+        where: { event_id, status: 'running' },
+        order: [['break_no', 'ASC'], ['round_no', 'ASC']],
+      });
+    }
+
     if (!round) {
       return res.status(404).json({ message: 'Round not found' });
     }
@@ -85,10 +111,22 @@ const pauseRound = async (req, res) => {
 
 const resumeRound = async (req, res) => {
   try {
-    const { round_id } = req.body;
     const organizerId = req.userId;
 
-    const round = await Round.findByPk(round_id);
+    let round;
+    if (req.body.round_id) {
+      round = await Round.findByPk(req.body.round_id);
+    } else {
+      const event_id = await resolveEventId(req.body.event_id);
+      if (!event_id) {
+        return res.status(400).json({ message: 'No active event found.' });
+      }
+      round = await Round.findOne({
+        where: { event_id, status: 'paused' },
+        order: [['break_no', 'ASC'], ['round_no', 'ASC']],
+      });
+    }
+
     if (!round) {
       return res.status(404).json({ message: 'Round not found' });
     }
@@ -112,10 +150,10 @@ const resumeRound = async (req, res) => {
 
 const getCurrentRound = async (req, res) => {
   try {
-    const { event_id } = req.query;
-    const where = event_id ? { event_id } : {};
+    const event_id = await resolveEventId(req.query.event_id);
+    const where = event_id ? { event_id, status: 'running' } : { status: 'running' };
     const round = await Round.findOne({
-      where: { ...where, status: 'running' },
+      where,
       order: [['break_no', 'ASC'], ['round_no', 'ASC']],
     });
     res.json({ round });

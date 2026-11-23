@@ -384,7 +384,7 @@ const {
           event_id: event.id,
           break_no: b,
           round_no: r,
-          status: r <= 3 ? 'completed' : 'planned',
+          status: r <= 3 ? 'done' : 'planned',
         });
         rounds.push(round);
       }
@@ -420,7 +420,7 @@ const {
     // ── MATCHES (round matches) ─────────────────────────────
     for (let i = 0; i < rounds.length; i++) {
       const round = rounds[i];
-      if (round.status === 'completed') {
+      if (round.status === 'done') {
         // Each mentee matched with a mentor
         for (let j = 0; j < mentees.length; j++) {
           const mentee = mentees[j];
@@ -437,7 +437,7 @@ const {
     }
 
     // ── FEEDBACK (after completed matches) ──────────────────
-    const completedRounds = rounds.filter((r) => r.status === 'completed');
+    const completedRounds = rounds.filter((r) => r.status === 'done');
     const matches = [];
     for (const round of completedRounds) {
       const roundMatches = await Match.findAll({ where: { round_id: round.id } });

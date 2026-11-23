@@ -3,8 +3,17 @@ const { Question, QuestionVote, Session, AuditLog } = require('../models');
 
 const getQuestions = async (req, res) => {
   try {
-    const { session_id } = req.query;
-    const where = session_id ? { session_id, status: 'visible' } : { status: 'visible' };
+    const { session_id, status } = req.query;
+    const where = {};
+    if (session_id) where.session_id = session_id;
+    // Organizers can request all questions (incl. hidden) via status=all
+    if (status === 'all') {
+      // no status filter
+    } else if (status) {
+      where.status = status;
+    } else {
+      where.status = 'visible';
+    }
     const userId = req.userId;
 
     const questions = await Question.findAll({
