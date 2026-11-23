@@ -1,11 +1,10 @@
 'use strict';
-const { Poll, PollVote, AuditLog } = require('../models');
+const { Poll, PollVote, AuditLog, Session } = require('../models');
 
 const getPolls = async (req, res) => {
   try {
     const { session_id } = req.query;
     const where = session_id ? { session_id } : {};
-    
     const polls = await Poll.findAll({ where, order: [['created_at', 'DESC']] });
     res.json({ polls });
   } catch (err) {
@@ -18,8 +17,14 @@ const createPoll = async (req, res) => {
     const { session_id, question, options } = req.body;
     const organizerId = req.userId;
 
+    let resolvedSessionId = session_id;
+    if (!resolvedSessionId) {
+      const session = await Session.findOne({ order: [['created_at', 'DESC']] });
+      if (session) resolvedSessionId = session.id;
+    }
+
     const poll = await Poll.create({
-      session_id,
+      session_id: resolvedSessionId,
       question,
       options,
     });

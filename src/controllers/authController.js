@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const { User, MenteeProfile, MentorProfile, Registration, Event, AuditLog } = require('../models');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
-const { sendEmail } = require('../utils/email');
+const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml } = require('../utils/email');
 const { generateQR } = require('../utils/qr');
 
 const { Op } = require('sequelize');
@@ -107,7 +107,7 @@ const register = async (req, res) => {
       to: email,
       subject: 'Verifique o seu email - Career Connect',
       text: `O seu código de verificação é: ${otp}. Válido por 10 minutos.`,
-      html: `<h2>Verificação de Email</h2><p>O seu código de verificação é: <strong>${otp}</strong>. Válido por 10 minutos.</p>`,
+      html: verificationEmailHtml({ name, code: otp }),
     });
 
     res.status(201).json({
@@ -185,7 +185,7 @@ const requestOTP = async (req, res) => {
       to: email,
       subject: 'Seu código OTP - Career Connect',
       text: `O seu código de verificação é: ${otp}. Válido por 10 minutos.`,
-      html: `<h2>Código OTP</h2><p>O seu código de verificação é: <strong>${otp}</strong>. Válido por 10 minutos.</p>`,
+      html: otpEmailHtml({ name: user.name, code: otp }),
     });
 
     res.json({ message: 'Código OTP enviado por email' });
@@ -260,14 +260,7 @@ const verifyEmail = async (req, res) => {
         to: email,
         subject: 'O seu bilhete digital - Career Connect',
         text: `O seu registo foi concluído. Bilhete: ${ticketCode}. Código curto: ${ticketCode}.`,
-        html: `
-          <h2>Bilhete Digital - Career Connect</h2>
-          <p>O seu registo foi concluído com sucesso!</p>
-          <p><strong>Código do bilhete:</strong> ${ticketCode}</p>
-          <p><strong>Código curto:</strong> ${ticketCode}</p>
-          ${qrPayload ? `<img src="${qrPayload}" alt="QR Code" style="max-width: 200px;"/>` : ''}
-          <p>Apresente este bilhete no evento.</p>
-        `,
+        html: digitalTicketEmailHtml({ name: user.name, ticketCode, qrPayload }),
       });
     }
 
@@ -311,7 +304,7 @@ const resendEmailOTP = async (req, res) => {
       to: email,
       subject: 'Reenvio - Verifique o seu email - Career Connect',
       text: `O seu novo código de verificação é: ${otp}. Válido por 10 minutos.`,
-      html: `<h2>Reenvio - Verificação de Email</h2><p>O seu novo código de verificação é: <strong>${otp}</strong>. Válido por 10 minutos.</p>`,
+      html: resendVerificationEmailHtml({ name: user.name, code: otp }),
     });
 
     res.json({ message: 'Código de verificação reenviado por email' });
@@ -341,7 +334,7 @@ const forgotPassword = async (req, res) => {
       to: email,
       subject: 'Redefinição de palavra-passe - Career Connect',
       text: `O seu código de redefinição é: ${otp}. Válido por 10 minutos.`,
-      html: `<h2>Redefinição de palavra-passe</h2><p>O seu código de redefinição é: <strong>${otp}</strong>. Válido por 10 minutos.</p>`,
+      html: forgotPasswordEmailHtml({ name: user.name, code: otp }),
     });
 
     res.json({ message: 'Código de redefinição enviado por email' });

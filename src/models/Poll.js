@@ -4,7 +4,7 @@ const { sequelize } = require('../config/db');
 
 const Poll = sequelize.define('Poll', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-  session_id: { type: DataTypes.UUID, allowNull: false },
+  session_id: { type: DataTypes.UUID, allowNull: true },
   question: { type: DataTypes.TEXT, allowNull: false },
   options: { type: DataTypes.JSON, allowNull: false },
 }, {
