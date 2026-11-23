@@ -172,7 +172,7 @@ const getRegistrations = async (req, res) => {
     const registrations = await Registration.findAll({
       where: status ? { status } : {},
       include: [
-        { model: User, where, attributes: ['id', 'name', 'email', 'phone', 'role'] },
+        { model: User, as: 'user', where, attributes: ['id', 'name', 'email', 'phone', 'role'] },
         { model: Event, as: 'event' },
       ],
     });
@@ -207,4 +207,29 @@ const deleteRegistration = async (req, res) => {
   }
 };
 
-module.exports = { registerForEvent, checkIn, walkIn, cancelCheckIn, getRegistrations, deleteRegistration };
+const getRegistrationByTicket = async (req, res) => {
+  try {
+    const { ticket_code } = req.query;
+    if (!ticket_code) {
+      return res.status(400).json({ message: 'ticket_code required' });
+    }
+
+    const registration = await Registration.findOne({
+      where: { ticket_code },
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'role'] },
+        { model: Event, as: 'event' },
+      ],
+    });
+
+    if (!registration) {
+      return res.status(404).json({ message: 'Registration not found' });
+    }
+
+    res.json({ registration });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { registerForEvent, checkIn, walkIn, cancelCheckIn, getRegistrations, deleteRegistration, getRegistrationByTicket };
