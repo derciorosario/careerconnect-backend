@@ -123,4 +123,59 @@ const moderateQuestion = async (req, res) => {
   }
 };
 
-module.exports = { getQuestions, createQuestion, voteQuestion, moderateQuestion };
+const updateQuestion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { body, status, projected, anonymous } = req.body;
+    const organizerId = req.userId;
+
+    const question = await Question.findByPk(id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    if (body !== undefined) question.body = body;
+    if (status !== undefined) question.status = status;
+    if (projected !== undefined) question.projected = projected;
+    if (anonymous !== undefined) question.anonymous = anonymous;
+    await question.save();
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'update_question',
+      entity: 'Question',
+      entity_id: question.id,
+    });
+
+    res.json({ question });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const deleteQuestion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organizerId = req.userId;
+
+    const question = await Question.findByPk(id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    await question.destroy();
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'delete_question',
+      entity: 'Question',
+      entity_id: id,
+    });
+
+    res.json({ message: 'Question deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { getQuestions, createQuestion, voteQuestion, moderateQuestion, updateQuestion, deleteQuestion };
