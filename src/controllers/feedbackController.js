@@ -43,7 +43,7 @@ const submitFeedback = async (req, res) => {
 
       console.log({mutual})
 
-      if (mutual || true) {
+      if (mutual) {
         const { Connection } = require('../models');
         const [user_a, user_b] = [fromUserId, to_user_id].sort((a, b) => a - b);
         

@@ -181,7 +181,7 @@ const generateMatches = async (req, res) => {
       return res.status(400).json({ message: 'No mentees available for matching.' });
     }
 
-    // ── Avoid repeating pairs from previous done rounds ─────────────────
+    // ── Avoid repeating mentor|mentee pairs from previous done rounds ─────
     const previousRounds = await Round.findAll({
       where: { event_id, status: 'done' },
       order: [['break_no', 'ASC'], ['round_no', 'ASC']],
@@ -199,48 +199,39 @@ const generateMatches = async (req, res) => {
       }
     });
 
-    // Even distribution: every mentee gets a mentor, no mentor left with zero if possible
+    // Even distribution: every mentee seated exactly once at one table.
+    // base = mentees per table, remainder = extra mentees spread to first tables.
     const base = Math.floor(mentees.length / mentors.length);
     const remainder = mentees.length % mentors.length;
+
+    // Shuffle so spreads vary between generations; each mentee is removed
+    // from `remaining` once assigned, guaranteeing one table per mentee.
+    let remaining = [...mentees].sort(() => Math.random() - 0.5);
     const matches = [];
-    let menteeIndex = 0;
 
     for (let i = 0; i < mentors.length; i++) {
       const mentor = mentors[i];
       const tableNo = i + 1;
-      const menteeCount = i < remainder ? base + 1 : base;
-      const menteeIds = [];
+      const needed = i < remainder ? base + 1 : base;
 
-      // Try to assign mentees not yet paired with this mentor
       const preferred = [];
       const fallback = [];
-      for (let j = menteeIndex; j < mentees.length; j++) {
-        const m = mentees[j];
+      remaining.forEach(m => {
         const pairKey = `${mentor.id}|${m.id}`;
         if (usedPairs.has(pairKey)) fallback.push(m);
         else preferred.push(m);
-      }
+      });
 
-      // Pick from preferred first, then fallback
-      let picked = [];
-      const needed = menteeCount;
-      for (let k = 0; k < needed && preferred.length > 0; k++) {
-        picked.push(preferred.shift());
-        menteeIndex++;
-      }
-      for (let k = picked.length; k < needed && fallback.length > 0; k++) {
-        picked.push(fallback.shift());
-        menteeIndex++;
-      }
-      // If still needed, take any remaining mentees in order
-      for (let k = picked.length; k < needed && menteeIndex < mentees.length; k++) {
-        picked.push(mentees[menteeIndex]);
-        menteeIndex++;
-      }
+      // Prefer mentees never paired with this mentor, then fall back.
+      const picked = [];
+      for (let k = 0; k < needed && preferred.length > 0; k++) picked.push(preferred.shift());
+      for (let k = picked.length; k < needed && fallback.length > 0; k++) picked.push(fallback.shift());
+      for (let k = picked.length; k < needed && remaining.length > 0; k++) picked.push(remaining.shift());
 
-      for (const m of picked) {
-        menteeIds.push(m.id);
-      }
+      const pickedIds = new Set(picked.map(m => m.id));
+      remaining = remaining.filter(m => !pickedIds.has(m.id));
+
+      const menteeIds = picked.map(m => m.id);
 
       // Simple compatibility score based on shared interests
       const mentorProfile = mentor.mentorProfile;
@@ -265,16 +256,6 @@ const generateMatches = async (req, res) => {
       });
 
       matches.push(match);
-    }
-
-    // If any mentees were left (shouldn't happen), attach to first mentor
-    if (menteeIndex < mentees.length) {
-      const leftovers = mentees.slice(menteeIndex).map(m => m.id);
-      const first = matches[0];
-      if (first) {
-        first.mentee_ids = [...first.mentee_ids, ...leftovers];
-        await first.save();
-      }
     }
 
     await AuditLog.create({
