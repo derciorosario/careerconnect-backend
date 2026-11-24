@@ -6,7 +6,16 @@ const getMyMatch = async (req, res) => {
     const { round_id } = req.query;
     const userId = req.userId;
 
-    const where = round_id ? { round_id } : {};
+    let targetRoundId = round_id;
+    if (!targetRoundId) {
+      const runningRound = await Round.findOne({
+        where: { status: 'running' },
+        order: [['break_no', 'ASC'], ['round_no', 'ASC']],
+      });
+      if (runningRound) targetRoundId = runningRound.id;
+    }
+
+    const where = targetRoundId ? { round_id: targetRoundId } : {};
     const matches = await Match.findAll({
       where,
       include: [
@@ -15,7 +24,7 @@ const getMyMatch = async (req, res) => {
       ],
     });
 
-    const match = matches.find(m => m.mentee_ids && m.mentee_ids.includes(userId));
+    const match = matches.find(m => m.mentee_ids && Array.isArray(m.mentee_ids) && m.mentee_ids.includes(userId));
 
     if (!match) {
       return res.json({ match: null, message: 'No match for this round' });
