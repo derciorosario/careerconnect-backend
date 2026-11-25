@@ -5,7 +5,7 @@ const { getMentorDirectory, getMenteeDirectory, addWish, getMyWishes, getWishCou
 const { authenticate, authorize } = require('../middleware/auth');
 
 router.get('/', authenticate, getMentorDirectory);
-router.get('/mentees', authenticate, authorize('mentor'), getMenteeDirectory);
+router.get('/mentees', authenticate, getMenteeDirectory);
 router.post('/wish', authenticate, authorize('mentee'), addWish);
 router.post('/wish/remove', authenticate, authorize('mentee'), removeWish);
 router.get('/wish/my', authenticate, authorize('mentee'), getMyWishes);

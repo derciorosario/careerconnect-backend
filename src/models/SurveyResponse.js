@@ -6,9 +6,10 @@ const SurveyResponse = sequelize.define('SurveyResponse', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   user_id: { type: DataTypes.UUID, allowNull: false },
   event_id: { type: DataTypes.UUID, allowNull: false },
-  rating: { type: DataTypes.INTEGER, allowNull: false },
+  rating: { type: DataTypes.INTEGER, allowNull: true },
   nps: { type: DataTypes.INTEGER },
   comment: { type: DataTypes.TEXT },
+  answers: { type: DataTypes.JSON, allowNull: true },
 }, {
   timestamps: true,
   createdAt: 'created_at',

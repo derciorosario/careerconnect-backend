@@ -7,7 +7,6 @@ const getEvent = async (req, res) => {
       where: { status: 'active' },
       include: [
         { model: Session, as: 'sessions' },
-        { model: Speaker, as: 'speakers' },
       ],
     });
     if (!event) {

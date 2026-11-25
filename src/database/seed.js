@@ -9,8 +9,9 @@ const {
   User, MentorProfile, MenteeProfile, Event, Session, Registration, Round,
   Speaker, Booking, Wish, Match, Feedback, Connection, MentorshipRequest,
   Message, Question, Poll, Announcement, Notification, SurveyResponse,
-  NextStep, Badge, AuditLog,
+  NextStep, Badge, AuditLog, Questionnaire,
 } = db;
+const { DEFAULT_QUESTIONNAIRE } = require('../utils/questionnaireDefaults');
 
 (async () => {
   try {
@@ -318,6 +319,12 @@ await MenteeProfile.create({
       warn_seconds: 30,
       tables_count: 10,
       match_weights: { areas: 45, goal: 20, sector: 10, want: 15, variety: 10 },
+    });
+
+    // ── QUESTIONNAIRE (event evaluation form) ────────────────
+    await Questionnaire.create({
+      event_id: event.id,
+      content: DEFAULT_QUESTIONNAIRE,
     });
 
     // ── SESSIONS (always created) ────────────────────────────
