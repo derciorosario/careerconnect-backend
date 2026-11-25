@@ -10,6 +10,9 @@ const SurveyResponse = sequelize.define('SurveyResponse', {
   nps: { type: DataTypes.INTEGER },
   comment: { type: DataTypes.TEXT },
   answers: { type: DataTypes.JSON, allowNull: true },
+  impact_answers: { type: DataTypes.JSON, allowNull: true },
+  main_sent: { type: DataTypes.BOOLEAN, defaultValue: false },
+  impact_sent: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
   timestamps: true,
   createdAt: 'created_at',

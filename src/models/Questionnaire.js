@@ -6,6 +6,8 @@ const Questionnaire = sequelize.define('Questionnaire', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   event_id: { type: DataTypes.UUID, allowNull: true },
   content: { type: DataTypes.JSON, allowNull: false },
+  main_enabled: { type: DataTypes.BOOLEAN, defaultValue: true },
+  impact_enabled: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {
   timestamps: true,
   createdAt: 'created_at',
