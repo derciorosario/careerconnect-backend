@@ -1,5 +1,11 @@
 'use strict';
-const { User, MenteeProfile, MentorProfile, Registration, Event, Feedback, Connection, MentorshipRequest, SurveyResponse, NextStep, Badge, AuditLog, Match, Round } = require('../models');
+const {
+  User, MenteeProfile, MentorProfile, Registration, Event, Feedback, Connection,
+  MentorshipRequest, SurveyResponse, NextStep, Badge, AuditLog, Match, Round,
+  Speaker, Session, Wish, Booking, Message, Question, QuestionVote, Poll, PollVote,
+  Announcement, Notification,
+} = require('../models');
+const { sequelize } = require('../config/db');
 
 const { Op } = require('sequelize');
 
@@ -136,6 +142,118 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+// Enable / disable a user. Disabled users cannot log in or participate in rounds.
+const setUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role === 'organizer') {
+      return res.status(400).json({ message: 'Não é possível desactivar um organizador.' });
+    }
+    const { is_active } = req.body;
+    user.is_active = is_active === true || is_active === 'true';
+    await user.save();
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Delete a user and everything created with/for them (cascade across models).
+const deleteUserByOrganizer = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+    if (!user) {
+      await t.rollback();
+      return res.status(404).json({ message: 'User not found' });
+    }
+    if (user.role === 'organizer') {
+      await t.rollback();
+      return res.status(400).json({ message: 'Não é possível eliminar um organizador.' });
+    }
+    if (id === req.userId) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Não podes eliminar a tua própria conta.' });
+    }
+
+    // ── Matches: delete those mentored by the user; detach the user from
+    //    mentee_ids of other matches (deleting any that become empty).
+    const allMatches = await Match.findAll({ transaction: t });
+    const matchIdsToDelete = [];
+    for (const m of allMatches) {
+      if (m.mentor_id === id) {
+        matchIdsToDelete.push(m.id);
+        continue;
+      }
+      const ids = Array.isArray(m.mentee_ids) ? m.mentee_ids : [];
+      if (ids.includes(id)) {
+        const remaining = ids.filter((x) => x !== id);
+        if (remaining.length === 0) matchIdsToDelete.push(m.id);
+        else await m.update({ mentee_ids: remaining }, { transaction: t });
+      }
+    }
+
+    // ── Feedback (by the user, about the user, or on deleted matches)
+    const feedbackWhere = { [Op.or]: [{ from_user_id: id }, { to_user_id: id }] };
+    if (matchIdsToDelete.length) feedbackWhere[Op.or].push({ match_id: matchIdsToDelete });
+    await Feedback.destroy({ where: feedbackWhere, transaction: t });
+
+    if (matchIdsToDelete.length) {
+      await Match.destroy({ where: { id: matchIdsToDelete }, transaction: t });
+    }
+
+    // ── Connections + their messages
+    const conns = await Connection.findAll({
+      where: { [Op.or]: [{ user_a: id }, { user_b: id }] },
+      transaction: t,
+    });
+    const connIds = conns.map((c) => c.id);
+    if (connIds.length) {
+      await Message.destroy({ where: { connection_id: connIds }, transaction: t });
+      await Connection.destroy({ where: { id: connIds }, transaction: t });
+    }
+    await Message.destroy({ where: { from_user_id: id }, transaction: t });
+
+    // ── Everything else that references the user
+    await MentorshipRequest.destroy({ where: { [Op.or]: [{ mentee_id: id }, { mentor_id: id }] }, transaction: t });
+    await QuestionVote.destroy({ where: { user_id: id }, transaction: t });
+    await PollVote.destroy({ where: { user_id: id }, transaction: t });
+    await Question.destroy({ where: { [Op.or]: [{ user_id: id }, { mentor_id: id }] }, transaction: t });
+    await Booking.destroy({ where: { user_id: id }, transaction: t });
+    await Wish.destroy({ where: { [Op.or]: [{ mentee_id: id }, { mentor_id: id }] }, transaction: t });
+    await Registration.destroy({ where: { user_id: id }, transaction: t });
+    await Notification.destroy({ where: { user_id: id }, transaction: t });
+    await SurveyResponse.destroy({ where: { user_id: id }, transaction: t });
+    await NextStep.destroy({ where: { user_id: id }, transaction: t });
+    await Badge.destroy({ where: { user_id: id }, transaction: t });
+    await AuditLog.destroy({ where: { actor_id: id }, transaction: t });
+    await Announcement.destroy({ where: { sent_by: id }, transaction: t });
+
+    // ── Sessions / speakers: detach (keep event content intact)
+    await Session.update({ mentor_id: null }, { where: { mentor_id: id }, transaction: t });
+    const speakers = await Speaker.findAll({ where: { user_id: id }, transaction: t });
+    const speakerIds = speakers.map((s) => s.id);
+    if (speakerIds.length) {
+      await Session.update({ speaker_id: null }, { where: { speaker_id: speakerIds }, transaction: t });
+      await Speaker.destroy({ where: { id: speakerIds }, transaction: t });
+    }
+
+    // ── Profiles then the user
+    await MenteeProfile.destroy({ where: { user_id: id }, transaction: t });
+    await MentorProfile.destroy({ where: { user_id: id }, transaction: t });
+    await user.destroy({ transaction: t });
+
+    await t.commit();
+    res.json({ message: 'Utilizador eliminado com sucesso.' });
+  } catch (err) {
+    await t.rollback();
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const getMenteeDashboard = async (req, res) => {
   try {
     const userId = req.userId;
@@ -194,4 +312,4 @@ const getMentorDashboard = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard, updateUserByOrganizer };
+module.exports = { getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard, updateUserByOrganizer, setUserStatus, deleteUserByOrganizer };

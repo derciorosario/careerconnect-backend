@@ -20,6 +20,7 @@ const User = sequelize.define('User', {
   consent_version: { type: DataTypes.STRING },
   notify_email: { type: DataTypes.BOOLEAN, defaultValue: true },
   notify_whatsapp: { type: DataTypes.BOOLEAN, defaultValue: true },
+  is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {
   timestamps: true,
   createdAt: 'created_at',

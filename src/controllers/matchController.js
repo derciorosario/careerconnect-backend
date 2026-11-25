@@ -237,35 +237,37 @@ const generateMatches = async (req, res) => {
     const roundIds = rounds.map(r => r.id);
     await Match.destroy({ where: { round_id: roundIds } });
 
-    // Registered mentees
+    // Only checked-in mentees (registration status "present") on active accounts.
     const menteeRegs = await Registration.findAll({
-      where: { event_id, status: 'registered' },
+      where: { event_id, status: 'present' },
       include: [{
         model: User,
         as: 'user',
-        where: { role: 'mentee' },
+        where: { role: 'mentee', is_active: true },
         attributes: ['id', 'name', 'photo_url'],
         include: [{ model: MenteeProfile, as: 'menteeProfile', attributes: ['goal', 'course', 'institution', 'interests'] }],
       }],
     });
     const mentees = menteeRegs.map(r => r.user);
 
-    // All mentors in the database participate (regardless of registration/approval).
-    const mentors = await User.findAll({
-      where: { role: 'mentor' },
-      attributes: ['id', 'name', 'photo_url'],
+    // Only checked-in mentors (registration status "present") on active accounts.
+    const mentorRegs = await Registration.findAll({
+      where: { event_id, status: 'present' },
       include: [{
-        model: MentorProfile,
-        as: 'mentorProfile',
-        attributes: ['job_title', 'company', 'sector', 'interests', 'max_mentees'],
+        model: User,
+        as: 'user',
+        where: { role: 'mentor', is_active: true },
+        attributes: ['id', 'name', 'photo_url'],
+        include: [{ model: MentorProfile, as: 'mentorProfile', attributes: ['job_title', 'company', 'sector', 'interests', 'max_mentees'] }],
       }],
     });
+    const mentors = mentorRegs.map(r => r.user);
 
     if (mentors.length === 0) {
-      return res.status(400).json({ message: 'No mentors available for matching.' });
+      return res.status(400).json({ message: 'No checked-in mentors available for matching.' });
     }
     if (mentees.length === 0) {
-      return res.status(400).json({ message: 'No mentees available for matching.' });
+      return res.status(400).json({ message: 'No checked-in mentees available for matching.' });
     }
 
     const totalCapacity = mentors.length * maxMentees;

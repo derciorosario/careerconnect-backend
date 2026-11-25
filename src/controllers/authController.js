@@ -160,6 +160,10 @@ const login = async (req, res) => {
       return res.status(403).json({ message: 'Email não verificado. Verifique o seu email antes de entrar.' });
     }
 
+    if (user.is_active === false) {
+      return res.status(403).json({ message: 'A sua conta foi desactivada. Contacte a organização.' });
+    }
+
     // For mentors: check if mentor profile is approved
     if (user.role === 'mentor') {
       const mentorProfile = await MentorProfile.findOne({ where: { user_id: user.id } });
@@ -419,6 +423,9 @@ const refreshToken = async (req, res) => {
     const user = await User.findByPk(decoded.userId);
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
+    }
+    if (user.is_active === false) {
+      return res.status(403).json({ message: 'Conta desactivada' });
     }
 
     const accessToken = signAccessToken({ userId: user.id, role: user.role });

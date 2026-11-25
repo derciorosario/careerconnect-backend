@@ -6,6 +6,7 @@ const fs = require('fs');
 const router = express.Router();
 const {
   getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard, updateUserByOrganizer,
+  setUserStatus, deleteUserByOrganizer,
 } = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -38,6 +39,8 @@ router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, upload.single('photo'), updateProfile);
 router.get('/', authenticate, authorize('organizer'), getAllUsers);
 router.put('/:id', authenticate, authorize('organizer'), upload.single('photo'), updateUserByOrganizer);
+router.put('/:id/status', authenticate, authorize('organizer'), setUserStatus);
+router.delete('/:id', authenticate, authorize('organizer'), deleteUserByOrganizer);
 router.get('/mentee/dashboard', authenticate, authorize('mentee'), getMenteeDashboard);
 router.get('/mentor/dashboard', authenticate, authorize('mentor'), getMentorDashboard);
 
