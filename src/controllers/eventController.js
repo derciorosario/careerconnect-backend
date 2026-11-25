@@ -22,7 +22,7 @@ const configureEvent = async (req, res) => {
   try {
     const {
       name, starts_at, ends_at, venue, map_url, capacity,
-      round_minutes, rounds_per_break, warn_seconds, tables_count,
+      round_minutes, rounds_per_break, max_mentees_per_mentor, warn_seconds, tables_count,
       floor_plan, match_weights, landing_texts, status,
     } = req.body;
 
@@ -31,13 +31,13 @@ const configureEvent = async (req, res) => {
     if (event) {
       await event.update({
         name, starts_at, ends_at, venue, map_url, capacity,
-        round_minutes, rounds_per_break, warn_seconds, tables_count,
+        round_minutes, rounds_per_break, max_mentees_per_mentor, warn_seconds, tables_count,
         floor_plan, match_weights, landing_texts, status,
       });
     } else {
       event = await Event.create({
         name, starts_at, ends_at, venue, map_url, capacity,
-        round_minutes, rounds_per_break, warn_seconds, tables_count,
+        round_minutes, rounds_per_break, max_mentees_per_mentor, warn_seconds, tables_count,
         floor_plan, match_weights, landing_texts, status: status || 'active',
       });
     }

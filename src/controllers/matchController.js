@@ -26,8 +26,34 @@ const getMyMatch = async (req, res) => {
 
     const match = matches.find(m => m.mentee_ids && Array.isArray(m.mentee_ids) && m.mentee_ids.includes(userId));
 
+    // Schedule across ALL rounds so the mentee can see every round's match
+    // before the countdown starts.
+    const allRoundMatches = await Match.findAll({
+      include: [
+        { model: Round, as: 'round' },
+        { model: User, as: 'mentor', include: [{ model: MentorProfile, as: 'mentorProfile' }] },
+      ],
+      order: [[{ model: Round, as: 'round' }, 'break_no', 'ASC'], [{ model: Round, as: 'round' }, 'round_no', 'ASC']],
+    });
+    const mineAll = allRoundMatches.filter(
+      m => Array.isArray(m.mentee_ids) && m.mentee_ids.includes(userId)
+    );
+    const allMatches = mineAll.map(m => ({
+      id: m.id,
+      round_id: m.round_id,
+      round_no: m.round ? m.round.round_no : null,
+      break_no: m.round ? m.round.break_no : null,
+      table_no: m.table_no,
+      mentor: m.mentor ? {
+        id: m.mentor.id,
+        name: m.mentor.name,
+        photo_url: m.mentor.photo_url,
+        profile: m.mentor.mentorProfile,
+      } : null,
+    }));
+
     if (!match) {
-      return res.json({ match: null, message: 'No match for this round' });
+      return res.json({ match: null, allMatches, message: 'No match for this round' });
     }
 
     const mentor = match.mentor;
@@ -51,6 +77,7 @@ const getMyMatch = async (req, res) => {
           profile: menteeProfiles.find(p => p.user_id === id),
         })),
       },
+      allMatches,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -82,13 +109,59 @@ const getMentorMatch = async (req, res) => {
     });
 
     if (!match) {
-      return res.json({ match: null, message: 'No match for this round' });
+      // Still return the full schedule so the mentor can plan ahead.
+      const sched = await Match.findAll({
+        where: { mentor_id: userId },
+        include: [{ model: Round, as: 'round' }],
+        order: [[{ model: Round, as: 'round' }, 'break_no', 'ASC'], [{ model: Round, as: 'round' }, 'round_no', 'ASC']],
+      });
+      const allMatches = sched.map(m => ({
+        id: m.id,
+        round_id: m.round_id,
+        round_no: m.round ? m.round.round_no : null,
+        break_no: m.round ? m.round.break_no : null,
+        table_no: m.table_no,
+        mentees: (m.mentee_ids || []).map((id) => ({ user_id: id })),
+      }));
+      return res.json({ match: null, allMatches, message: 'No match for this round' });
     }
 
     const menteeProfiles = await MenteeProfile.findAll({
       where: { user_id: match.mentee_ids },
       include: [{ model: User, as: 'user', attributes: ['id', 'name', 'photo_url'] }],
     });
+
+    // Schedule across ALL rounds for this mentor.
+    const sched = await Match.findAll({
+      where: { mentor_id: userId },
+      include: [
+        { model: Round, as: 'round' },
+        { model: User, as: 'mentor' },
+      ],
+      order: [[{ model: Round, as: 'round' }, 'break_no', 'ASC'], [{ model: Round, as: 'round' }, 'round_no', 'ASC']],
+    });
+    const schedMenteeProfiles = await MenteeProfile.findAll({
+      where: { user_id: sched.flatMap(m => m.mentee_ids || []) },
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'photo_url'] }],
+    });
+    const allMatches = sched.map(m => ({
+      id: m.id,
+      round_id: m.round_id,
+      round_no: m.round ? m.round.round_no : null,
+      break_no: m.round ? m.round.break_no : null,
+      table_no: m.table_no,
+      mentees: (m.mentee_ids || []).map((id) => {
+        const profile = schedMenteeProfiles.find(p => p.user_id === id);
+        return {
+          user_id: id,
+          name: profile ? profile.user.name : '',
+          photo_url: profile ? profile.user.photo_url : '',
+          goal: profile ? profile.goal : '',
+          pitch: profile ? profile.pitch : '',
+          course: profile ? profile.course : '',
+        };
+      }),
+    }));
 
     res.json({
       match: {
@@ -108,6 +181,7 @@ const getMentorMatch = async (req, res) => {
           };
         }),
       },
+      allMatches,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -134,28 +208,34 @@ const getAllMatches = async (req, res) => {
 const generateMatches = async (req, res) => {
   try {
     const organizerId = req.userId;
+    const { Op } = require('sequelize');
 
-    const active = await Event.findOne({
-      where: { status: { [require('sequelize').Op.notIn]: ['finished', 'closed'] } },
+    const event = await Event.findOne({
+      where: { status: { [Op.notIn]: ['finished', 'closed'] } },
       order: [['starts_at', 'DESC']],
     });
-    const event_id = active ? active.id : null;
+    const event_id = event ? event.id : null;
 
     if (!event_id) {
       return res.status(400).json({ message: 'No active event found.' });
     }
 
-    const round = await Round.findOne({
-      where: { event_id, status: 'running' },
+    // Maximum number of mentees a mentor can be associated with per round.
+    const maxMentees = Math.max(1, Number(event.max_mentees_per_mentor) || 3);
+
+    // Generate the distribution for ALL existing rounds at once.
+    const rounds = await Round.findAll({
+      where: { event_id },
       order: [['break_no', 'ASC'], ['round_no', 'ASC']],
     });
 
-    if (!round) {
-      return res.status(400).json({ message: 'No running round found. Start a round first.' });
+    if (rounds.length === 0) {
+      return res.status(400).json({ message: 'No rounds found. Create rounds first.' });
     }
 
-    // Idempotent: remove existing matches for this round
-    await Match.destroy({ where: { round_id: round.id } });
+    // Idempotent: wipe every match for these rounds before regenerating.
+    const roundIds = rounds.map(r => r.id);
+    await Match.destroy({ where: { round_id: roundIds } });
 
     // Registered mentees
     const menteeRegs = await Registration.findAll({
@@ -170,18 +250,16 @@ const generateMatches = async (req, res) => {
     });
     const mentees = menteeRegs.map(r => r.user);
 
-    // Registered approved mentors
-    const mentorRegs = await Registration.findAll({
-      where: { event_id, status: 'registered' },
+    // All mentors in the database participate (regardless of registration/approval).
+    const mentors = await User.findAll({
+      where: { role: 'mentor' },
+      attributes: ['id', 'name', 'photo_url'],
       include: [{
-        model: User,
-        as: 'user',
-        where: { role: 'mentor' },
-        attributes: ['id', 'name', 'photo_url'],
-        include: [{ model: MentorProfile, as: 'mentorProfile', where: { approval: 'approved' }, attributes: ['job_title', 'company', 'sector', 'interests', 'max_mentees'] }],
+        model: MentorProfile,
+        as: 'mentorProfile',
+        attributes: ['job_title', 'company', 'sector', 'interests', 'max_mentees'],
       }],
     });
-    const mentors = mentorRegs.map(r => r.user);
 
     if (mentors.length === 0) {
       return res.status(400).json({ message: 'No approved mentors available for matching.' });
@@ -190,91 +268,78 @@ const generateMatches = async (req, res) => {
       return res.status(400).json({ message: 'No mentees available for matching.' });
     }
 
-    // ── Avoid repeating mentor|mentee pairs from previous done rounds ─────
-    const previousRounds = await Round.findAll({
-      where: { event_id, status: 'done' },
-      order: [['break_no', 'ASC'], ['round_no', 'ASC']],
-    });
-    const previousRoundIds = previousRounds.map(r => r.id);
-    const previousMatches = previousRoundIds.length > 0
-      ? await Match.findAll({ where: { round_id: previousRoundIds } })
-      : [];
+    const totalCapacity = mentors.length * maxMentees;
+    if (mentees.length > totalCapacity) {
+      return res.status(400).json({
+        message: `Capacidade insuficiente: ${mentors.length} mentores x ${maxMentees} = ${totalCapacity} lugares para ${mentees.length} mentorandos. Aumenta o máximo de mentorandos por mentor.`,
+      });
+    }
+
+    // Track mentor|mentee pairs already used so mentees rotate mentors across rounds.
     const usedPairs = new Set();
-    previousMatches.forEach(m => {
-      if (m.mentee_ids && Array.isArray(m.mentee_ids)) {
-        m.mentee_ids.forEach(menteeId => {
-          usedPairs.add(`${m.mentor_id}|${menteeId}`);
-        });
-      }
-    });
-
-    // Even distribution: every mentee seated exactly once at one table.
-    // base = mentees per table, remainder = extra mentees spread to first tables.
-    const base = Math.floor(mentees.length / mentors.length);
-    const remainder = mentees.length % mentors.length;
-
-    // Shuffle so spreads vary between generations; each mentee is removed
-    // from `remaining` once assigned, guaranteeing one table per mentee.
-    let remaining = [...mentees].sort(() => Math.random() - 0.5);
     const matches = [];
 
-    for (let i = 0; i < mentors.length; i++) {
-      const mentor = mentors[i];
-      const tableNo = i + 1;
-      const needed = i < remainder ? base + 1 : base;
+    for (const round of rounds) {
+      // mentorId -> array of assigned mentee ids for this round
+      const assignment = new Map();
+      mentors.forEach(m => assignment.set(m.id, []));
 
-      const preferred = [];
-      const fallback = [];
-      remaining.forEach(m => {
-        const pairKey = `${mentor.id}|${m.id}`;
-        if (usedPairs.has(pairKey)) fallback.push(m);
-        else preferred.push(m);
-      });
+      // Shuffle mentees each round for variety.
+      const queue = [...mentees].sort(() => Math.random() - 0.5);
 
-      // Prefer mentees never paired with this mentor, then fall back.
-      const picked = [];
-      for (let k = 0; k < needed && preferred.length > 0; k++) picked.push(preferred.shift());
-      for (let k = picked.length; k < needed && fallback.length > 0; k++) picked.push(fallback.shift());
-      for (let k = picked.length; k < needed && remaining.length > 0; k++) picked.push(remaining.shift());
+      for (const mentee of queue) {
+        // Mentors that still have capacity this round.
+        const candidates = mentors.filter(m => assignment.get(m.id).length < maxMentees);
+        if (candidates.length === 0) break; // no capacity left (shouldn't happen after the check)
 
-      const pickedIds = new Set(picked.map(m => m.id));
-      remaining = remaining.filter(m => !pickedIds.has(m.id));
+        // Prefer a mentor this mentee has not met yet, otherwise pick at random.
+        let chosen = candidates.find(m => !usedPairs.has(`${m.id}|${mentee.id}`));
+        if (!chosen) chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
-      const menteeIds = picked.map(m => m.id);
-
-      // Simple compatibility score based on shared interests
-      const mentorProfile = mentor.mentorProfile;
-      let bestScore = 60;
-      for (const mId of menteeIds) {
-        const m = mentees.find(x => x.id === mId);
-        const mProf = m.menteeProfile;
-        let overlap = 0;
-        if (mentorProfile && mProf && mentorProfile.interests && mProf.interests) {
-          overlap = mentorProfile.interests.filter(x => mProf.interests.includes(x)).length;
-        }
-        const score = Math.min(95, 60 + overlap * 8 + Math.floor(Math.random() * 10));
-        if (score > bestScore) bestScore = score;
+        assignment.get(chosen.id).push(mentee.id);
+        usedPairs.add(`${chosen.id}|${mentee.id}`);
       }
 
-      const match = await Match.create({
-        round_id: round.id,
-        table_no: tableNo,
-        mentor_id: mentor.id,
-        mentee_ids: menteeIds,
-        score: bestScore,
-      });
+      // One Match row per mentor that received at least one mentee.
+      for (let i = 0; i < mentors.length; i++) {
+        const mentor = mentors[i];
+        const menteeIds = assignment.get(mentor.id);
+        if (!menteeIds || menteeIds.length === 0) continue;
 
-      matches.push(match);
+        // Simple compatibility score based on shared interests.
+        const mentorProfile = mentor.mentorProfile;
+        let bestScore = 60;
+        for (const mId of menteeIds) {
+          const m = mentees.find(x => x.id === mId);
+          const mProf = m ? m.menteeProfile : null;
+          let overlap = 0;
+          if (mentorProfile && mProf && mentorProfile.interests && mProf.interests) {
+            overlap = mentorProfile.interests.filter(x => mProf.interests.includes(x)).length;
+          }
+          const score = Math.min(95, 60 + overlap * 8 + Math.floor(Math.random() * 10));
+          if (score > bestScore) bestScore = score;
+        }
+
+        const match = await Match.create({
+          round_id: round.id,
+          table_no: i + 1,
+          mentor_id: mentor.id,
+          mentee_ids: menteeIds,
+          score: bestScore,
+        });
+
+        matches.push(match);
+      }
     }
 
     await AuditLog.create({
       actor_id: organizerId,
       action: 'generate_matches',
-      entity: 'Match',
-      entity_id: round.id,
+      entity: 'Event',
+      entity_id: event_id,
     });
 
-    res.json({ matches, round });
+    res.json({ matches, rounds });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
