@@ -10,7 +10,6 @@ const Session = sequelize.define('Session', {
   title: { type: DataTypes.STRING, allowNull: false },
   challenge: { type: DataTypes.TEXT },
   starts_at: { type: DataTypes.DATE },
-  speaker_id: { type: DataTypes.UUID },
   mentor_id: { type: DataTypes.UUID },
   theme: { type: DataTypes.STRING },
 }, {

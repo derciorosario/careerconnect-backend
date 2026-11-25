@@ -1,18 +1,7 @@
 'use strict';
-const { Session, Event, Speaker, AuditLog, User } = require('../models');
+const { Session, Event, AuditLog, User } = require('../models');
 const { Op } = require('sequelize');
 
-const resolveSpeakerId = async (value) => {
-  if (!value) return null;
-  const direct = await Speaker.findByPk(value);
-  if (direct) return direct.id;
-  let byUser = await Speaker.findOne({ where: { user_id: value } });
-  if (byUser) return byUser.id;
-  const user = await User.findByPk(value);
-  if (!user) return null;
-  byUser = await Speaker.create({ name: user.name || user.email, user_id: user.id });
-  return byUser.id;
-};
 const resolveEventId = async (explicit) => {
   const active = await Event.findOne({
     where: { status: { [Op.notIn]: ['finished', 'closed'] } },
@@ -27,7 +16,7 @@ const getSessions = async (req, res) => {
     const where = event_id ? { event_id } : {};
     const sessions = await Session.findAll({
       where,
-      include: [{ model: Speaker, as: 'speaker' }],
+      include: [{ model: User, as: 'mentor', attributes: ['id', 'name'] }],
       order: [['starts_at', 'ASC']],
     });
     res.json({ sessions });
@@ -39,7 +28,7 @@ const getSessions = async (req, res) => {
 const createSession = async (req, res) => {
   try {
     const organizerId = req.userId;
-    const { event_id, order, type, title, challenge, starts_at, speaker_id } = req.body;
+    const { event_id, order, type, title, challenge, starts_at, mentor_id } = req.body;
 
     const eventId = await resolveEventId(event_id);
     if (!eventId) {
@@ -53,7 +42,7 @@ const createSession = async (req, res) => {
       title,
       challenge: challenge || null,
       starts_at: starts_at || null,
-      speaker_id: await resolveSpeakerId(speaker_id),
+      mentor_id: mentor_id || null,
     });
 
     await AuditLog.create({
@@ -64,7 +53,7 @@ const createSession = async (req, res) => {
     });
 
     const created = await Session.findByPk(session.id, {
-      include: [{ model: Speaker, as: 'speaker' }],
+      include: [{ model: User, as: 'mentor', attributes: ['id', 'name'] }],
     });
 
     res.status(201).json({ session: created });
@@ -77,7 +66,7 @@ const updateSession = async (req, res) => {
   try {
     const organizerId = req.userId;
     const { id } = req.params;
-    const { order, type, title, challenge, starts_at, speaker_id } = req.body;
+    const { order, type, title, challenge, starts_at, mentor_id } = req.body;
 
     const session = await Session.findByPk(id);
     if (!session) {
@@ -89,7 +78,7 @@ const updateSession = async (req, res) => {
     if (title !== undefined) session.title = title;
     if (challenge !== undefined) session.challenge = challenge;
     if (starts_at !== undefined) session.starts_at = starts_at;
-    if (speaker_id !== undefined) session.speaker_id = await resolveSpeakerId(speaker_id);
+    if (mentor_id !== undefined) session.mentor_id = mentor_id;
 
     await session.save();
 
@@ -101,7 +90,7 @@ const updateSession = async (req, res) => {
     });
 
     const updated = await Session.findByPk(session.id, {
-      include: [{ model: Speaker, as: 'speaker' }],
+      include: [{ model: User, as: 'mentor', attributes: ['id', 'name'] }],
     });
 
     res.json({ session: updated });
