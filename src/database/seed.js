@@ -35,253 +35,275 @@ const {
       emailVerified: true,
     });
 
-    const mentorUser = await User.create({
-      name: 'Carlos Tembe',
-      email: 'carlos@careerconnect.co.mz',
-      phone: '+258841111111',
-      role: 'mentor',
-      password_hash: await bcrypt.hash('Mentor123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MentorProfile.create({
-      user_id: mentorUser.id,
-      job_title: 'Engenheiro de Software',
-      company: 'TechSolutions',
-      sector: 'Tecnologia e TI',
-      years: 10,
-      interests: ['Tecnologia e TI', 'Engenharia'],
-      can_help_goals: ['Escolher a minha área', 'Desenvolver competências'],
-      support_type: 'Mentor',
-      max_mentees: 3,
-      approval: 'approved',
-    });
+ 
+    
 
-    const menteeUser = await User.create({
-      name: 'Ana Mondlane',
-      email: 'ana@careerconnect.co.mz',
-      phone: '+258842222222',
-      role: 'mentee',
-      password_hash: await bcrypt.hash('Mentee123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MenteeProfile.create({
-      user_id: menteeUser.id,
-      level: 'estudante',
-      course: 'Engenharia Informática',
-      institution: 'UEM',
-      interests: ['Tecnologia e TI', 'Engenharia'],
-      goal: 'Escolher a minha área',
-      pitch: 'Estudante do último ano à procura de orientação de carreira.',
-    });
 
-    // Additional mentors (always created)
-    const mentor2 = await User.create({
-      name: 'Sara Cumbe',
-      email: 'sara@careerconnect.co.mz',
-      phone: '+258843333333',
-      role: 'mentor',
-      password_hash: await bcrypt.hash('Mentor123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MentorProfile.create({
-      user_id: mentor2.id,
-      job_title: 'Directora de Finanças',
-      company: 'Standard Bank',
-      sector: 'Finanças e Banca',
-      years: 8,
-      interests: ['Finanças e Banca', 'Gestão e Empreendedorismo'],
-      can_help_goals: ['Construir a minha marca pessoal', 'Desenvolver competências'],
-      support_type: 'Mentor',
-      max_mentees: 3,
-      approval: 'approved',
-    });
+const mentorUser = await User.create({
+  name: 'Carlos Tembe',
+  email: 'carlos@careerconnect.co.mz',
+  phone: '+258841111111',
+  role: 'mentor',
+  password_hash: await bcrypt.hash('Mentor123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
 
-    const mentor3 = await User.create({
-      name: 'Nuno Bila',
-      email: 'nuno@careerconnect.co.mz',
-      phone: '+258844444444',
-      role: 'mentor',
-      password_hash: await bcrypt.hash('Mentor123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MentorProfile.create({
-      user_id: mentor3.id,
-      job_title: 'Engenheiro de Software',
-      company: 'Vodacom',
-      sector: 'Tecnologia e TI',
-      years: 6,
-      interests: ['Tecnologia e TI', 'Engenharia'],
-      can_help_goals: ['Escolher a minha área', 'Desenvolver competências'],
-      support_type: 'Coach',
-      max_mentees: 3,
-      approval: 'approved',
-    });
+await MentorProfile.create({
+  user_id: mentorUser.id,
+  job_title: 'Programador Web',
+  company: 'TechSolutions',
+  sector: 'Programação Web',
+  years: 10,
+  interests: ['Programação Web', 'Tecnologia (Redes e Hardware)'],
+  can_help_goals: ['Escolher a minha área', 'Desenvolver competências'],
+  support_type: 'Mentor',
+  max_mentees: 3,
+  approval: 'approved',
+});
 
-    const mentor4 = await User.create({
-      name: 'Ilda Mussa',
-      email: 'ilda@careerconnect.co.mz',
-      phone: '+258845555555',
-      role: 'mentor',
-      password_hash: await bcrypt.hash('Mentor123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MentorProfile.create({
-      user_id: mentor4.id,
-      job_title: 'Advogada',
-      company: 'Mussa & Associados',
-      sector: 'Direito',
-      years: 12,
-      interests: ['Direito', 'Gestão e Empreendedorismo'],
-      can_help_goals: ['Criar o meu negócio'],
-      support_type: 'Orientação pontual',
-      max_mentees: 2,
-      approval: 'pending',
-    });
+const menteeUser = await User.create({
+  name: 'Ana Mondlane',
+  email: 'ana@careerconnect.co.mz',
+  phone: '+258842222222',
+  role: 'mentee',
+  password_hash: await bcrypt.hash('Mentee123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
 
-    const mentor5 = await User.create({
-      name: 'Rui Machava',
-      email: 'rui@careerconnect.co.mz',
-      phone: '+258846666666',
-      role: 'mentor',
-      password_hash: await bcrypt.hash('Mentor123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MentorProfile.create({
-      user_id: mentor5.id,
-      job_title: 'Director de RH',
-      company: 'Vale Moçambique',
-      sector: 'Recursos Humanos',
-      years: 10,
-      interests: ['Recursos Humanos', 'Gestão e Empreendedorismo'],
-      can_help_goals: ['Escolher a minha área', 'Mudar de percurso'],
-      support_type: 'Mentor',
-      max_mentees: 4,
-      approval: 'approved',
-    });
+await MenteeProfile.create({
+  user_id: menteeUser.id,
+  level: 'estudante',
+  course: 'Engenharia Informática',
+  institution: 'UEM',
+  interests: ['Programação Web', 'Tecnologia (Redes e Hardware)'],
+  goal: 'Escolher a minha área',
+  pitch: 'Estudante do último ano à procura de orientação de carreira.',
+});
 
-    const mentor6 = await User.create({
-      name: 'Lídia Zimba',
-      email: 'lidia@careerconnect.co.mz',
-      phone: '+258847777777',
-      role: 'mentor',
-      password_hash: await bcrypt.hash('Mentor123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MentorProfile.create({
-      user_id: mentor6.id,
-      job_title: 'Fundadora',
-      company: 'Zimba Agro',
-      sector: 'Agricultura',
-      years: 7,
-      interests: ['Agricultura', 'Energia e Recursos Naturais'],
-      can_help_goals: ['Criar o meu negócio'],
-      support_type: 'Coach',
-      max_mentees: 3,
-      approval: 'approved',
-    });
+// Additional mentors (always created)
+const mentor2 = await User.create({
+  name: 'Sara Cumbe',
+  email: 'sara@careerconnect.co.mz',
+  phone: '+258843333333',
+  role: 'mentor',
+  password_hash: await bcrypt.hash('Mentor123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
 
-    // Additional mentees (always created)
-    const mentee2 = await User.create({
-      name: 'Bruno Chissano',
-      email: 'bruno@careerconnect.co.mz',
-      phone: '+258848888888',
-      role: 'mentee',
-      password_hash: await bcrypt.hash('Mentee123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MenteeProfile.create({
-      user_id: mentee2.id,
-      level: 'recem_graduado',
-      course: 'Engenharia Informática',
-      institution: 'ISCTEM',
-      interests: ['Tecnologia e TI', 'Engenharia'],
-      goal: 'Preparar o primeiro estágio',
-      pitch: 'Procuro orientação para o meu primeiro estágio.',
-    });
+await MentorProfile.create({
+  user_id: mentor2.id,
+  job_title: 'Directora de Finanças',
+  company: 'Standard Bank',
+  sector: 'Contabilidade',
+  years: 8,
+  interests: ['Contabilidade', 'Recursos Humanos'],
+  can_help_goals: ['Construir a minha marca pessoal', 'Desenvolver competências'],
+  support_type: 'Mentor',
+  max_mentees: 3,
+  approval: 'approved',
+});
 
-    const mentee3 = await User.create({
-      name: 'Cláudia Nhantumbo',
-      email: 'claudia@careerconnect.co.mz',
-      phone: '+258849999999',
-      role: 'mentee',
-      password_hash: await bcrypt.hash('Mentee123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MenteeProfile.create({
-      user_id: mentee3.id,
-      level: 'Estudante',
-      course: 'Direito',
-      institution: 'UEM',
-      interests: ['Direito', 'Gestão e Empreendedorismo'],
-      goal: 'Construir a minha marca pessoal',
-      pitch: 'Quero comunicar melhor o que sei fazer.',
-    });
+const mentor3 = await User.create({
+  name: 'Nuno Bila',
+  email: 'nuno@careerconnect.co.mz',
+  phone: '+258844444444',
+  role: 'mentor',
+  password_hash: await bcrypt.hash('Mentor123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
 
-    const mentee4 = await User.create({
-      name: 'Dino Matola',
-      email: 'dino@careerconnect.co.mz',
-      phone: '+258850000000',
-      role: 'mentee',
-      password_hash: await bcrypt.hash('Mentee123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MenteeProfile.create({
-      user_id: mentee4.id,
-      level: 'Estudante',
-      course: 'Economia',
-      institution: 'ISUTC',
-      interests: ['Finanças e Banca', 'Educação'],
-      goal: 'Desenvolver competências',
-      pitch: 'Quero reforçar a análise de dados.',
-    });
+await MentorProfile.create({
+  user_id: mentor3.id,
+  job_title: 'Engenheiro de Software',
+  company: 'Vodacom',
+  sector: 'Programação Web',
+  years: 6,
+  interests: ['Programação Web', 'Tecnologia (Redes e Hardware)'],
+  can_help_goals: ['Escolher a minha área', 'Desenvolver competências'],
+  support_type: 'Coach',
+  max_mentees: 3,
+  approval: 'approved',
+});
 
-    const mentee5 = await User.create({
-      name: 'Elsa Macie',
-      email: 'elsa@careerconnect.co.mz',
-      phone: '+258851111111',
-      role: 'mentee',
-      password_hash: await bcrypt.hash('Mentee123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MenteeProfile.create({
-      user_id: mentee5.id,
-      level: 'Estudante',
-      course: 'Agronomia',
-      institution: 'UEM',
-      interests: ['Agricultura', 'Energia e Recursos Naturais'],
-      goal: 'Criar o meu negócio',
-      pitch: 'Tenho uma ideia de negócio agrícola.',
-    });
+const mentor4 = await User.create({
+  name: 'Ilda Mussa',
+  email: 'ilda@careerconnect.co.mz',
+  phone: '+258845555555',
+  role: 'mentor',
+  password_hash: await bcrypt.hash('Mentor123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
 
-    const mentee6 = await User.create({
-      name: 'Fátima Sitoe',
-      email: 'fatima@careerconnect.co.mz',
-      phone: '+258852222222',
-      role: 'mentee',
-      password_hash: await bcrypt.hash('Mentee123!', salt),
-      password_salt: salt,
-      emailVerified: true,
-    });
-    await MenteeProfile.create({
-      user_id: mentee6.id,
-      level: 'recem_graduado',
-      course: 'Marketing',
-      institution: 'ISCIM',
-      interests: ['Marketing e Comunicação'],
-      goal: 'Mudar de percurso',
-      pitch: 'Quero passar de vendas para marketing.',
-    });
+await MentorProfile.create({
+  user_id: mentor4.id,
+  job_title: 'Advogada',
+  company: 'Mussa & Associados',
+  sector: 'Relações Públicas e Marketing',
+  years: 12,
+  interests: ['Relações Públicas e Marketing', 'Contabilidade'],
+  can_help_goals: ['Criar o meu negócio'],
+  support_type: 'Orientação pontual',
+  max_mentees: 2,
+  approval: 'pending',
+});
+
+const mentor5 = await User.create({
+  name: 'Rui Machava',
+  email: 'rui@careerconnect.co.mz',
+  phone: '+258846666666',
+  role: 'mentor',
+  password_hash: await bcrypt.hash('Mentor123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MentorProfile.create({
+  user_id: mentor5.id,
+  job_title: 'Director de RH',
+  company: 'Vale Moçambique',
+  sector: 'Recursos Humanos',
+  years: 10,
+  interests: ['Recursos Humanos', 'Secretariado'],
+  can_help_goals: ['Escolher a minha área', 'Mudar de percurso'],
+  support_type: 'Mentor',
+  max_mentees: 4,
+  approval: 'approved',
+});
+
+const mentor6 = await User.create({
+  name: 'Lídia Zimba',
+  email: 'lidia@careerconnect.co.mz',
+  phone: '+258847777777',
+  role: 'mentor',
+  password_hash: await bcrypt.hash('Mentor123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MentorProfile.create({
+  user_id: mentor6.id,
+  job_title: 'Fundadora',
+  company: 'Zimba Agro',
+  sector: 'Marketing Digital',
+  years: 7,
+  interests: ['Marketing Digital', 'Relações Públicas e Marketing'],
+  can_help_goals: ['Criar o meu negócio'],
+  support_type: 'Coach',
+  max_mentees: 3,
+  approval: 'approved',
+});
+
+// Additional mentees (always created)
+const mentee2 = await User.create({
+  name: 'Bruno Chissano',
+  email: 'bruno@careerconnect.co.mz',
+  phone: '+258848888888',
+  role: 'mentee',
+  password_hash: await bcrypt.hash('Mentee123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MenteeProfile.create({
+  user_id: mentee2.id,
+  level: 'recem_graduado',
+  course: 'Engenharia Informática',
+  institution: 'ISCTEM',
+  interests: ['Programação Web', 'Tecnologia (Redes e Hardware)'],
+  goal: 'Preparar o primeiro estágio',
+  pitch: 'Procuro orientação para o meu primeiro estágio.',
+});
+
+const mentee3 = await User.create({
+  name: 'Cláudia Nhantumbo',
+  email: 'claudia@careerconnect.co.mz',
+  phone: '+258849999999',
+  role: 'mentee',
+  password_hash: await bcrypt.hash('Mentee123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MenteeProfile.create({
+  user_id: mentee3.id,
+  level: 'Estudante',
+  course: 'Direito',
+  institution: 'UEM',
+  interests: ['Relações Públicas e Marketing', 'Contabilidade'],
+  goal: 'Construir a minha marca pessoal',
+  pitch: 'Quero comunicar melhor o que sei fazer.',
+});
+
+const mentee4 = await User.create({
+  name: 'Dino Matola',
+  email: 'dino@careerconnect.co.mz',
+  phone: '+258850000000',
+  role: 'mentee',
+  password_hash: await bcrypt.hash('Mentee123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MenteeProfile.create({
+  user_id: mentee4.id,
+  level: 'Estudante',
+  course: 'Economia',
+  institution: 'ISUTC',
+  interests: ['Contabilidade', 'Marketing Digital'],
+  goal: 'Desenvolver competências',
+  pitch: 'Quero reforçar a análise de dados.',
+});
+
+const mentee5 = await User.create({
+  name: 'Elsa Macie',
+  email: 'elsa@careerconnect.co.mz',
+  phone: '+258851111111',
+  role: 'mentee',
+  password_hash: await bcrypt.hash('Mentee123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MenteeProfile.create({
+  user_id: mentee5.id,
+  level: 'Estudante',
+  course: 'Agronomia',
+  institution: 'UEM',
+  interests: ['Marketing Digital', 'Recursos Humanos'],
+  goal: 'Criar o meu negócio',
+  pitch: 'Tenho uma ideia de negócio agrícola.',
+});
+
+const mentee6 = await User.create({
+  name: 'Fátima Sitoe',
+  email: 'fatima@careerconnect.co.mz',
+  phone: '+258852222222',
+  role: 'mentee',
+  password_hash: await bcrypt.hash('Mentee123!', salt),
+  password_salt: salt,
+  emailVerified: true,
+});
+
+await MenteeProfile.create({
+  user_id: mentee6.id,
+  level: 'recem_graduado',
+  course: 'Marketing',
+  institution: 'ISCIM',
+  interests: ['Marketing Digital', 'Relações Públicas e Marketing'],
+  goal: 'Mudar de percurso',
+  pitch: 'Quero passar de vendas para marketing.',
+});
+
+
+    
+
+
+
 
     // ── EVENT ──────────────────────────────────────────────
     const event = await Event.create({

@@ -24,6 +24,23 @@ const getMentorDirectory = async (req, res) => {
   }
 };
 
+const getMenteeDirectory = async (req, res) => {
+  try {
+    const mentees = await User.findAll({
+      where: { role: 'mentee' },
+      include: [
+        { model: MenteeProfile, as: 'menteeProfile' },
+      ],
+      attributes: ['id', 'name', 'email', 'phone', 'photo_url', 'linkedin_url'],
+      order: [['name', 'ASC']],
+    });
+
+    res.json({ mentees });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const addWish = async (req, res) => {
   try {
     const { mentor_id } = req.body;
@@ -129,4 +146,4 @@ const removeWish = async (req, res) => {
   }
 };
 
-module.exports = { getMentorDirectory, addWish, getMyWishes, getWishCount, removeWish, getWishesForMentor };
+module.exports = { getMentorDirectory, getMenteeDirectory, addWish, getMyWishes, getWishCount, removeWish, getWishesForMentor };

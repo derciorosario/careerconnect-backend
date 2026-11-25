@@ -48,28 +48,32 @@ const sendMessage = async (req, res) => {
 
     // Determine receiver (the other user in the connection)
     const receiverId = connection.user_a === fromUserId ? connection.user_b : connection.user_a;
-    const receiver = await User.findByPk(receiverId, { attributes: ['id', 'name', 'email', 'phone'] });
+    const receiver = await User.findByPk(receiverId, { attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'] });
     const sender = await User.findByPk(fromUserId, { attributes: ['id', 'name'] });
 
     if (receiver && receiver.email) {
       const preview = body.length > 60 ? body.slice(0, 60) + '…' : body;
       try {
-        sendEmail({
-          to: receiver.email,
-          subject: `Nova mensagem de ${sender.name} - Career Connect`,
-          text: `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name}: ${preview}`,
-          html: messageReceivedEmailHtml({
-            receiverName: receiver.name,
-            senderName: sender.name,
-            preview,
-          }),
-        });
+        if (receiver.notify_email !== false) {
+          sendEmail({
+            to: receiver.email,
+            subject: `Nova mensagem de ${sender.name} - Career Connect`,
+            text: `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name}: ${preview}`,
+            html: messageReceivedEmailHtml({
+              receiverName: receiver.name,
+              senderName: sender.name,
+              preview,
+            }),
+          });
+        }
       } catch (emailErr) {
         console.error('Failed to send message email:', emailErr.message);
       }
 
-      // Send the same notification via WhatsApp (if the receiver has a phone number)
-      await notifyWhatsApp(receiver.phone, `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name} no Career Connect: ${preview}`);
+      // Send the same notification via WhatsApp (if enabled and the receiver has a phone number)
+      if (receiver.notify_whatsapp !== false) {
+        await notifyWhatsApp(receiver.phone, `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name} no Career Connect: ${preview}`);
+      }
     }
 
     res.status(201).json({ message: msg });

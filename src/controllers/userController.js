@@ -34,6 +34,12 @@ const updateProfile = async (req, res) => {
     if (req.file) user.photo_url = `/uploads/${req.file.filename}`;
     else if (photo_url !== undefined) user.photo_url = photo_url;
     if (linkedin_url !== undefined) user.linkedin_url = linkedin_url;
+    if (req.body.notify_email !== undefined) {
+      user.notify_email = req.body.notify_email === true || req.body.notify_email === 'true';
+    }
+    if (req.body.notify_whatsapp !== undefined) {
+      user.notify_whatsapp = req.body.notify_whatsapp === true || req.body.notify_whatsapp === 'true';
+    }
     await user.save();
 
     // Update role-specific profile (partial update — never reset approval/limits)

@@ -43,26 +43,30 @@ const createRequest = async (req, res) => {
     });
 
     // Send email to mentor about new request
-    const mentee = await User.findByPk(menteeId, { attributes: ['id', 'name', 'email', 'phone'] });
-    const mentor = await User.findByPk(mentor_id, { attributes: ['id', 'name', 'email', 'phone'] });
+    const mentee = await User.findByPk(menteeId, { attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'] });
+    const mentor = await User.findByPk(mentor_id, { attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'] });
     if (mentor && mentor.email && mentee) {
       try {
-        sendEmail({
-          to: mentor.email,
-          subject: `Novo pedido de mentoria de ${mentee.name} - Career Connect`,
-          text: `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria.${message ? ` Mensagem: "${message}"` : ''}`,
-          html: mentorshipRequestReceivedEmailHtml({
-            mentorName: mentor.name,
-            menteeName: mentee.name,
-            message: message || '',
-          }),
-        });
+        if (mentor.notify_email !== false) {
+          sendEmail({
+            to: mentor.email,
+            subject: `Novo pedido de mentoria de ${mentee.name} - Career Connect`,
+            text: `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria.${message ? ` Mensagem: "${message}"` : ''}`,
+            html: mentorshipRequestReceivedEmailHtml({
+              mentorName: mentor.name,
+              menteeName: mentee.name,
+              message: message || '',
+            }),
+          });
+        }
       } catch (emailErr) {
         console.error('Failed to send mentorship request email:', emailErr.message);
       }
 
-      // Send the same notification via WhatsApp (if the mentor has a phone number)
-      await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria no Career Connect.${message ? ` Mensagem: "${message}"` : ''}`);
+      // Send the same notification via WhatsApp (if enabled and the mentor has a phone number)
+      if (mentor.notify_whatsapp !== false) {
+        await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria no Career Connect.${message ? ` Mensagem: "${message}"` : ''}`);
+      }
     }
 
     res.status(201).json({ request });
@@ -117,8 +121,8 @@ const respondToRequest = async (req, res) => {
     await request.save();
 
     // Fetch mentee and mentor for emails
-    const mentee = await User.findByPk(request.mentee_id, { attributes: ['id', 'name', 'email', 'phone'] });
-    const mentor = await User.findByPk(mentorId, { attributes: ['id', 'name', 'email', 'phone'] });
+    const mentee = await User.findByPk(request.mentee_id, { attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'] });
+    const mentor = await User.findByPk(mentorId, { attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'] });
 
     // If accepted, create connection
     if (status === 'accepted') {
@@ -132,68 +136,80 @@ const respondToRequest = async (req, res) => {
       // Send connection created email to both
       if (mentee && mentee.email && mentor) {
         try {
-          sendEmail({
-            to: mentee.email,
-            subject: `Ligação criada com ${mentor.name} - Career Connect`,
-            text: `Olá ${mentee.name}, está agora conectado com ${mentor.name}.`,
-            html: connectionCreatedEmailHtml({
-              userName: mentee.name,
-              contactName: mentor.name,
-              contactRole: 'Mentor',
-            }),
-          });
+          if (mentee.notify_email !== false) {
+            sendEmail({
+              to: mentee.email,
+              subject: `Ligação criada com ${mentor.name} - Career Connect`,
+              text: `Olá ${mentee.name}, está agora conectado com ${mentor.name}.`,
+              html: connectionCreatedEmailHtml({
+                userName: mentee.name,
+                contactName: mentor.name,
+                contactRole: 'Mentor',
+              }),
+            });
+          }
         } catch (emailErr) {
           console.error('Failed to send connection email to mentee:', emailErr.message);
         }
 
-        // Send the same notification via WhatsApp (if the mentee has a phone number)
-        await notifyWhatsApp(mentee.phone, `Olá ${mentee.name}, está agora conectado com ${mentor.name} no Career Connect.`);
+        // Send the same notification via WhatsApp (if enabled and the mentee has a phone number)
+        if (mentee.notify_whatsapp !== false) {
+          await notifyWhatsApp(mentee.phone, `Olá ${mentee.name}, está agora conectado com ${mentor.name} no Career Connect.`);
+        }
       }
       if (mentor && mentor.email && mentee) {
         try {
-          sendEmail({
-            to: mentor.email,
-            subject: `Nova ligação com ${mentee.name} - Career Connect`,
-            text: `Olá ${mentor.name}, está agora conectado com ${mentee.name}.`,
-            html: connectionCreatedEmailHtml({
-              userName: mentor.name,
-              contactName: mentee.name,
-              contactRole: 'Mentorado',
-            }),
-          });
+          if (mentor.notify_email !== false) {
+            sendEmail({
+              to: mentor.email,
+              subject: `Nova ligação com ${mentee.name} - Career Connect`,
+              text: `Olá ${mentor.name}, está agora conectado com ${mentee.name}.`,
+              html: connectionCreatedEmailHtml({
+                userName: mentor.name,
+                contactName: mentee.name,
+                contactRole: 'Mentorado',
+              }),
+            });
+          }
         } catch (emailErr) {
           console.error('Failed to send connection email to mentor:', emailErr.message);
         }
 
-        // Send the same notification via WhatsApp (if the mentor has a phone number)
-        await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, está agora conectado com ${mentee.name} no Career Connect.`);
+        // Send the same notification via WhatsApp (if enabled and the mentor has a phone number)
+        if (mentor.notify_whatsapp !== false) {
+          await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, está agora conectado com ${mentee.name} no Career Connect.`);
+        }
       }
     }
 
     // Send email to mentee about the response
     if (mentee && mentee.email) {
       try {
-        sendEmail({
-          to: mentee.email,
-          subject: status === 'accepted' ? `Pedido de mentoria aceite - Career Connect` : `Pedido de mentoria recusado - Career Connect`,
-          text: status === 'accepted'
-            ? `Olá ${mentee.name}, o seu pedido de mentoria foi aceite por ${mentor ? mentor.name : 'o mentor'}.`
-            : `Olá ${mentee.name}, o seu pedido de mentoria foi recusado por ${mentor ? mentor.name : 'o mentor'}.`,
-          html: mentorshipRequestRespondedEmailHtml({
-            menteeName: mentee.name,
-            mentorName: mentor ? mentor.name : 'Mentor',
-            status,
-          }),
-        });
-        } catch (emailErr) {
-          console.error('Failed to send mentorship response email:', emailErr.message);
+        if (mentee.notify_email !== false) {
+          sendEmail({
+            to: mentee.email,
+            subject: status === 'accepted' ? `Pedido de mentoria aceite - Career Connect` : `Pedido de mentoria recusado - Career Connect`,
+            text: status === 'accepted'
+              ? `Olá ${mentee.name}, o seu pedido de mentoria foi aceite por ${mentor ? mentor.name : 'o mentor'}.`
+              : `Olá ${mentee.name}, o seu pedido de mentoria foi recusado por ${mentor ? mentor.name : 'o mentor'}.`,
+            html: mentorshipRequestRespondedEmailHtml({
+              menteeName: mentee.name,
+              mentorName: mentor ? mentor.name : 'Mentor',
+              status,
+            }),
+          });
         }
+      } catch (emailErr) {
+        console.error('Failed to send mentorship response email:', emailErr.message);
+      }
 
-        // Send the same notification via WhatsApp (if the mentee has a phone number)
+      // Send the same notification via WhatsApp (if enabled and the mentee has a phone number)
+      if (mentee.notify_whatsapp !== false) {
         await notifyWhatsApp(mentee.phone, status === 'accepted'
           ? `Olá ${mentee.name}, o seu pedido de mentoria foi aceite por ${mentor ? mentor.name : 'o mentor'} no Career Connect.`
           : `Olá ${mentee.name}, o seu pedido de mentoria foi recusado por ${mentor ? mentor.name : 'o mentor'} no Career Connect.`);
       }
+    }
 
     res.json({ request });
   } catch (err) {

@@ -120,6 +120,7 @@ Question.belongsTo(Session, { foreignKey: 'session_id', as: 'session' });
 // User has many Questions
 User.hasMany(Question, { foreignKey: 'user_id', as: 'questions' });
 Question.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Question.belongsTo(User, { foreignKey: 'mentor_id', as: 'mentor' });
 
 // Question has many QuestionVotes
 Question.hasMany(QuestionVote, { foreignKey: 'question_id', as: 'votes' });

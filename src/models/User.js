@@ -18,6 +18,8 @@ const User = sequelize.define('User', {
   linkedin_url: { type: DataTypes.TEXT },
   consent_at: { type: DataTypes.DATE },
   consent_version: { type: DataTypes.STRING },
+  notify_email: { type: DataTypes.BOOLEAN, defaultValue: true },
+  notify_whatsapp: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {
   timestamps: true,
   createdAt: 'created_at',

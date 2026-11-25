@@ -1,5 +1,5 @@
 'use strict';
-const { Question, QuestionVote, Session, AuditLog } = require('../models');
+const { Question, QuestionVote, Session, AuditLog, User, Registration } = require('../models');
 
 const getQuestions = async (req, res) => {
   try {
@@ -19,7 +19,8 @@ const getQuestions = async (req, res) => {
     const questions = await Question.findAll({
       where,
       include: [
-        { model: Question.sequelize.models.User, as: 'user', attributes: ['id', 'name'] },
+        { model: User, as: 'user', attributes: ['id', 'name'] },
+        { model: User, as: 'mentor', attributes: ['id', 'name'] },
         { model: QuestionVote, as: 'votes', attributes: ['id', 'user_id'] },
       ],
       order: [['created_at', 'DESC']],
@@ -43,8 +44,22 @@ const getQuestions = async (req, res) => {
 
 const createQuestion = async (req, res) => {
   try {
-    const { session_id, body, anonymous } = req.body;
+    const { session_id, body, anonymous, mentor_id } = req.body;
     const userId = req.userId;
+
+    const author = await User.findByPk(userId, { attributes: ['id', 'role'] });
+
+    // Mentees can only submit questions before check-in (before the event).
+    // Once checked in (registration status 'present'), sending is blocked,
+    // but they can still view the questions.
+    if (author && author.role === 'mentee') {
+      const registration = await Registration.findOne({
+        where: { user_id: userId, status: 'present' },
+      });
+      if (registration) {
+        return res.status(403).json({ message: 'Já fez check-in. As perguntas só podem ser enviadas antes do evento.' });
+      }
+    }
 
     // Auto-resolve session if not a valid UUID
     let sessId = session_id;
@@ -56,9 +71,19 @@ const createQuestion = async (req, res) => {
       sessId = currentSession.id;
     }
 
+    // Mentor selection is optional; validate it when provided
+    let mentorId = mentor_id || null;
+    if (mentorId) {
+      const mentor = await User.findOne({ where: { id: mentorId, role: 'mentor' } });
+      if (!mentor) {
+        return res.status(400).json({ message: 'Mentor inválido.' });
+      }
+    }
+
     const question = await Question.create({
       session_id: sessId,
       user_id: userId,
+      mentor_id: mentorId,
       body,
       anonymous: anonymous || false,
       status: 'visible',
@@ -71,7 +96,15 @@ const createQuestion = async (req, res) => {
       entity_id: question.id,
     });
 
-    res.status(201).json({ question });
+    // Reload with associations so the client can render the mentor immediately
+    const created = await Question.findByPk(question.id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'name'] },
+        { model: User, as: 'mentor', attributes: ['id', 'name'] },
+      ],
+    });
+
+    res.status(201).json({ question: created });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -126,7 +159,7 @@ const moderateQuestion = async (req, res) => {
 const updateQuestion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { body, status, projected, anonymous } = req.body;
+    const { body, status, projected, anonymous, mentor_id } = req.body;
     const organizerId = req.userId;
 
     const question = await Question.findByPk(id);
@@ -138,6 +171,15 @@ const updateQuestion = async (req, res) => {
     if (status !== undefined) question.status = status;
     if (projected !== undefined) question.projected = projected;
     if (anonymous !== undefined) question.anonymous = anonymous;
+    if (mentor_id !== undefined) {
+      if (mentor_id) {
+        const mentor = await User.findOne({ where: { id: mentor_id, role: 'mentor' } });
+        if (!mentor) {
+          return res.status(400).json({ message: 'Mentor inválido.' });
+        }
+      }
+      question.mentor_id = mentor_id || null;
+    }
     await question.save();
 
     await AuditLog.create({

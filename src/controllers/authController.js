@@ -3,10 +3,24 @@ const bcrypt = require('bcryptjs');
 const { User, MenteeProfile, MentorProfile, Registration, Event, AuditLog } = require('../models');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
 const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml, mentorApprovedEmailHtml } = require('../utils/email');
-const { notifyWhatsApp } = require('../utils/whatsapp');
+const { notifyWhatsApp, formatPhoneNumber } = require('../utils/whatsapp');
 const { generateQR } = require('../utils/qr');
 
 const { Op } = require('sequelize');
+
+// Find a user by either an email address or a phone/WhatsApp number.
+// The login form accepts both in the same field.
+const findUserByIdentifier = async (identifier) => {
+  if (!identifier) return null;
+  const value = String(identifier).trim();
+  if (value.includes('@')) {
+    return User.findOne({ where: { email: value } });
+  }
+  const formatted = formatPhoneNumber(value);
+  const conditions = [{ phone: value }];
+  if (formatted) conditions.push({ phone: formatted });
+  return User.findOne({ where: { [Op.or]: conditions } });
+};
 
 const register = async (req, res) => {
   try {
@@ -115,7 +129,7 @@ const register = async (req, res) => {
     await notifyWhatsApp(phone, `Olá, ${name}! O seu código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.`);
 
     res.status(201).json({
-      message: 'Conta criada. Verifique o seu email com o código enviado.',
+      message: 'Conta criada. Verifique o seu email e WhatsApp com o código enviado.',
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
       requiresEmailVerification: true,
     });
@@ -129,7 +143,7 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await findUserByIdentifier(email);
     if (!user) {
       return res.status(401).json({ message: 'Credenciais inválidas' });
     }
@@ -172,7 +186,7 @@ const requestOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await findUserByIdentifier(email);
     if (!user) {
       return res.status(404).json({ message: 'Utilizador não encontrado' });
     }
@@ -186,7 +200,7 @@ const requestOTP = async (req, res) => {
 
     // Send OTP via email
     await sendEmail({
-      to: email,
+      to: user.email,
       subject: 'Seu código OTP - Career Connect',
       text: `O seu código de verificação é: ${otp}. Válido por 10 minutos.`,
       html: otpEmailHtml({ name: user.name, code: otp }),
@@ -195,7 +209,7 @@ const requestOTP = async (req, res) => {
     // Send OTP via WhatsApp (if the user has a phone number)
     await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código OTP do Career Connect é: ${otp}. Válido por 10 minutos.`);
 
-    res.json({ message: 'Código OTP enviado por email' });
+    res.json({ message: 'Código OTP enviado por email e WhatsApp' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
@@ -206,7 +220,7 @@ const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await findUserByIdentifier(email);
     if (!user || user.otp_code !== otp) {
       return res.status(401).json({ message: 'Código OTP inválido' });
     }
@@ -322,7 +336,7 @@ const resendEmailOTP = async (req, res) => {
     // Send verification code via WhatsApp (if the user has a phone number)
     await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu novo código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.`);
 
-    res.json({ message: 'Código de verificação reenviado por email' });
+    res.json({ message: 'Código de verificação reenviado por email e WhatsApp' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });

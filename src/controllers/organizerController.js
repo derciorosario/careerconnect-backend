@@ -96,16 +96,22 @@ const approveMentor = async (req, res) => {
 
     const user = await User.findByPk(mentor_id);
     if (user) {
+      const canEmail = user.notify_email !== false;
+      const canWhatsapp = user.notify_whatsapp !== false;
       try {
-         sendEmail({
-          to: user.email,
-          subject: action === 'approve' ? 'Mentor aprovado - Career Connect' : 'Candidatura de mentor - Career Connect',
-          text: `Olá ${user.name}, a sua candidatura de mentor foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
-          html: mentorApprovedEmailHtml({ name: user.name, approved: action === 'approve' }),
-        });
+        if (canEmail) {
+          sendEmail({
+            to: user.email,
+            subject: action === 'approve' ? 'Mentor aprovado - Career Connect' : 'Candidatura de mentor - Career Connect',
+            text: `Olá ${user.name}, a sua candidatura de mentor foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
+            html: mentorApprovedEmailHtml({ name: user.name, approved: action === 'approve' }),
+          });
+        }
 
-        // Send the same notification via WhatsApp (if the user has a phone number)
-        await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de mentor no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`);
+        // Send the same notification via WhatsApp (if enabled and the user has a phone number)
+        if (canWhatsapp) {
+          await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de mentor no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`);
+        }
       } catch (emailErr) {
         console.error('Failed to send mentor approval email:', emailErr.message);
       }

@@ -30,6 +30,7 @@ require('dotenv').config();
 
   // Now sync models using the configured database
   const { sequelize } = require('../config/db');
+  require('../models'); // register all models on the sequelize instance
 
   try {
     await sequelize.authenticate();
