@@ -26,7 +26,7 @@ const register = async (req, res) => {
   try {
     const {
       name, email, phone, password, role,
-      level, course, institution, interests, goal, pitch,
+      level, course, institution, interests, goal, pitch, jobObstacle,
       jobTitle, company, sector, years, mentorInterests, canHelpGoals, supportType,
       photo, linkedin,
     } = req.body;
@@ -70,6 +70,7 @@ const register = async (req, res) => {
         interests: interests || [],
         goal: goal || '',
         pitch: pitch || '',
+        job_obstacle: jobObstacle || null,
       });
     } else if (role === 'mentor') {
       await MentorProfile.create({

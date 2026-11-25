@@ -11,6 +11,7 @@ const MenteeProfile = sequelize.define('MenteeProfile', {
   interests: { type: DataTypes.JSON },
   goal: { type: DataTypes.STRING },
   pitch: { type: DataTypes.STRING(120) },
+  job_obstacle: { type: DataTypes.STRING },
 }, {
   timestamps: true,
   createdAt: 'created_at',

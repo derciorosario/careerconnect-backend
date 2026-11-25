@@ -34,6 +34,7 @@ app.use('/api/questions', require('./routes/questions'));
 app.use('/api/polls', require('./routes/polls'));
 app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/survey', require('./routes/survey'));
+app.use('/api/registration-config', require('./routes/registrationConfig'));
 app.use('/api/next-steps', require('./routes/nextSteps'));
 app.use('/api/badges', require('./routes/badges'));
 app.use('/api/bookings', require('./routes/bookings'));

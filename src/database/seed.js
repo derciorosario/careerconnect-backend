@@ -9,9 +9,10 @@ const {
   User, MentorProfile, MenteeProfile, Event, Session, Registration, Round,
   Speaker, Booking, Wish, Match, Feedback, Connection, MentorshipRequest,
   Message, Question, Poll, Announcement, Notification, SurveyResponse,
-  NextStep, Badge, AuditLog, Questionnaire,
+  NextStep, Badge, AuditLog, Questionnaire, RegistrationConfig,
 } = db;
 const { DEFAULT_QUESTIONNAIRE } = require('../utils/questionnaireDefaults');
+const { DEFAULT_REGISTRATION_CONFIG } = require('../utils/registrationDefaults');
 
 (async () => {
   try {
@@ -81,6 +82,7 @@ await MenteeProfile.create({
   interests: ['Programação Web', 'Tecnologia (Redes e Hardware)'],
   goal: 'Escolher a minha área',
   pitch: 'Estudante do último ano à procura de orientação de carreira.',
+  job_obstacle: 'Falta de experiência',
 });
 
 // Additional mentors (always created)
@@ -218,6 +220,7 @@ await MenteeProfile.create({
   interests: ['Programação Web', 'Tecnologia (Redes e Hardware)'],
   goal: 'Preparar o primeiro estágio',
   pitch: 'Procuro orientação para o meu primeiro estágio.',
+  job_obstacle: 'Falta de contactos',
 });
 
 const mentee3 = await User.create({
@@ -238,6 +241,7 @@ await MenteeProfile.create({
   interests: ['Relações Públicas e Marketing', 'Contabilidade'],
   goal: 'Construir a minha marca pessoal',
   pitch: 'Quero comunicar melhor o que sei fazer.',
+  job_obstacle: 'Falta de formação',
 });
 
 const mentee4 = await User.create({
@@ -258,6 +262,7 @@ await MenteeProfile.create({
   interests: ['Contabilidade', 'Marketing Digital'],
   goal: 'Desenvolver competências',
   pitch: 'Quero reforçar a análise de dados.',
+  job_obstacle: 'Falta de experiência',
 });
 
 const mentee5 = await User.create({
@@ -278,6 +283,7 @@ await MenteeProfile.create({
   interests: ['Marketing Digital', 'Recursos Humanos'],
   goal: 'Criar o meu negócio',
   pitch: 'Tenho uma ideia de negócio agrícola.',
+  job_obstacle: 'Outro',
 });
 
 const mentee6 = await User.create({
@@ -298,6 +304,7 @@ await MenteeProfile.create({
   interests: ['Marketing Digital', 'Relações Públicas e Marketing'],
   goal: 'Mudar de percurso',
   pitch: 'Quero passar de vendas para marketing.',
+  job_obstacle: 'Falta de contactos',
 });
 
 
@@ -326,6 +333,9 @@ await MenteeProfile.create({
       event_id: event.id,
       content: DEFAULT_QUESTIONNAIRE,
     });
+
+    // ── REGISTRATION CONFIG (editable form options) ──────────
+    await RegistrationConfig.create(DEFAULT_REGISTRATION_CONFIG);
 
     // ── SESSIONS (always created) ────────────────────────────
     const session1 = await Session.create({
