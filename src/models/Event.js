@@ -13,7 +13,7 @@ const Event = sequelize.define('Event', {
   status: { type: DataTypes.STRING, defaultValue: 'draft' },
   round_minutes: { type: DataTypes.INTEGER, defaultValue: 5 },
   rounds_per_break: { type: DataTypes.INTEGER, defaultValue: 4 },
-  max_mentees_per_mentor: { type: DataTypes.INTEGER, defaultValue: 3 },
+  max_mentees_per_mentor: { type: DataTypes.INTEGER, defaultValue: 5 },
   warn_seconds: { type: DataTypes.INTEGER, defaultValue: 30 },
   tables_count: { type: DataTypes.INTEGER, defaultValue: 10 },
   floor_plan: { type: DataTypes.TEXT },

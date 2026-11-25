@@ -262,7 +262,7 @@ const generateMatches = async (req, res) => {
     });
 
     if (mentors.length === 0) {
-      return res.status(400).json({ message: 'No approved mentors available for matching.' });
+      return res.status(400).json({ message: 'No mentors available for matching.' });
     }
     if (mentees.length === 0) {
       return res.status(400).json({ message: 'No mentees available for matching.' });
@@ -279,25 +279,37 @@ const generateMatches = async (req, res) => {
     const usedPairs = new Set();
     const matches = [];
 
-    for (const round of rounds) {
+    for (let roundIdx = 0; roundIdx < rounds.length; roundIdx++) {
+      const round = rounds[roundIdx];
+
       // mentorId -> array of assigned mentee ids for this round
       const assignment = new Map();
       mentors.forEach(m => assignment.set(m.id, []));
 
       // Shuffle mentees each round for variety.
-      const queue = [...mentees].sort(() => Math.random() - 0.5);
+      let remaining = [...mentees].sort(() => Math.random() - 0.5);
 
-      for (const mentee of queue) {
-        // Mentors that still have capacity this round.
-        const candidates = mentors.filter(m => assignment.get(m.id).length < maxMentees);
-        if (candidates.length === 0) break; // no capacity left (shouldn't happen after the check)
+      // Rotate the mentor order each round so participation is fair (every
+      // mentor gets a turn) and mentees tend to meet different mentors.
+      const offset = mentors.length ? (roundIdx * maxMentees) % mentors.length : 0;
+      const orderedMentors = [...mentors.slice(offset), ...mentors.slice(0, offset)];
 
-        // Prefer a mentor this mentee has not met yet, otherwise pick at random.
-        let chosen = candidates.find(m => !usedPairs.has(`${m.id}|${mentee.id}`));
-        if (!chosen) chosen = candidates[Math.floor(Math.random() * candidates.length)];
+      // Round-robin: give one mentee to each mentor per pass before anyone gets
+      // a second. This guarantees EVERY mentor participates in the round
+      // whenever there are at least as many mentees as mentors.
+      for (let pass = 0; pass < maxMentees; pass++) {
+        for (const mentor of orderedMentors) {
+          if (remaining.length === 0) break;
+          if (assignment.get(mentor.id).length >= maxMentees) continue;
 
-        assignment.get(chosen.id).push(mentee.id);
-        usedPairs.add(`${chosen.id}|${mentee.id}`);
+          // Prefer a mentee this mentor has not met yet.
+          let idx = remaining.findIndex(m => !usedPairs.has(`${mentor.id}|${m.id}`));
+          if (idx === -1) idx = 0;
+          const [mentee] = remaining.splice(idx, 1);
+          assignment.get(mentor.id).push(mentee.id);
+          usedPairs.add(`${mentor.id}|${mentee.id}`);
+        }
+        if (remaining.length === 0) break;
       }
 
       // One Match row per mentor that received at least one mentee.
@@ -332,6 +344,10 @@ const generateMatches = async (req, res) => {
       }
     }
 
+    // Warn (but still succeed) when there are more mentors than mentees, since
+    // then some mentors cannot receive a mentee in a given round.
+    const idleMentors = Math.max(0, mentors.length - mentees.length);
+
     await AuditLog.create({
       actor_id: organizerId,
       action: 'generate_matches',
@@ -339,7 +355,16 @@ const generateMatches = async (req, res) => {
       entity_id: event_id,
     });
 
-    res.json({ matches, rounds });
+    res.json({
+      matches,
+      rounds,
+      mentors: mentors.length,
+      mentees: mentees.length,
+      idleMentors,
+      message: idleMentors > 0
+        ? `${idleMentors} mentor(es) sem mentorando por ronda (há mais mentores que mentorandos).`
+        : 'Todos os mentores participam em todas as rondas.',
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
