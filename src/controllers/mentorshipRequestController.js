@@ -1,6 +1,7 @@
 'use strict';
 const { MentorshipRequest, User, MentorProfile, MenteeProfile, AuditLog, Connection } = require('../models');
 const { sendEmail, mentorshipRequestReceivedEmailHtml, mentorshipRequestRespondedEmailHtml, connectionCreatedEmailHtml } = require('../utils/email');
+const { notifyWhatsApp } = require('../utils/whatsapp');
 
 const createRequest = async (req, res) => {
   try {
@@ -42,8 +43,8 @@ const createRequest = async (req, res) => {
     });
 
     // Send email to mentor about new request
-    const mentee = await User.findByPk(menteeId, { attributes: ['id', 'name', 'email'] });
-    const mentor = await User.findByPk(mentor_id, { attributes: ['id', 'name', 'email'] });
+    const mentee = await User.findByPk(menteeId, { attributes: ['id', 'name', 'email', 'phone'] });
+    const mentor = await User.findByPk(mentor_id, { attributes: ['id', 'name', 'email', 'phone'] });
     if (mentor && mentor.email && mentee) {
       try {
         sendEmail({
@@ -59,6 +60,9 @@ const createRequest = async (req, res) => {
       } catch (emailErr) {
         console.error('Failed to send mentorship request email:', emailErr.message);
       }
+
+      // Send the same notification via WhatsApp (if the mentor has a phone number)
+      await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria no Career Connect.${message ? ` Mensagem: "${message}"` : ''}`);
     }
 
     res.status(201).json({ request });
@@ -113,8 +117,8 @@ const respondToRequest = async (req, res) => {
     await request.save();
 
     // Fetch mentee and mentor for emails
-    const mentee = await User.findByPk(request.mentee_id, { attributes: ['id', 'name', 'email'] });
-    const mentor = await User.findByPk(mentorId, { attributes: ['id', 'name', 'email'] });
+    const mentee = await User.findByPk(request.mentee_id, { attributes: ['id', 'name', 'email', 'phone'] });
+    const mentor = await User.findByPk(mentorId, { attributes: ['id', 'name', 'email', 'phone'] });
 
     // If accepted, create connection
     if (status === 'accepted') {
@@ -141,6 +145,9 @@ const respondToRequest = async (req, res) => {
         } catch (emailErr) {
           console.error('Failed to send connection email to mentee:', emailErr.message);
         }
+
+        // Send the same notification via WhatsApp (if the mentee has a phone number)
+        await notifyWhatsApp(mentee.phone, `Olá ${mentee.name}, está agora conectado com ${mentor.name} no Career Connect.`);
       }
       if (mentor && mentor.email && mentee) {
         try {
@@ -157,6 +164,9 @@ const respondToRequest = async (req, res) => {
         } catch (emailErr) {
           console.error('Failed to send connection email to mentor:', emailErr.message);
         }
+
+        // Send the same notification via WhatsApp (if the mentor has a phone number)
+        await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, está agora conectado com ${mentee.name} no Career Connect.`);
       }
     }
 
@@ -175,10 +185,15 @@ const respondToRequest = async (req, res) => {
             status,
           }),
         });
-      } catch (emailErr) {
-        console.error('Failed to send mentorship response email:', emailErr.message);
+        } catch (emailErr) {
+          console.error('Failed to send mentorship response email:', emailErr.message);
+        }
+
+        // Send the same notification via WhatsApp (if the mentee has a phone number)
+        await notifyWhatsApp(mentee.phone, status === 'accepted'
+          ? `Olá ${mentee.name}, o seu pedido de mentoria foi aceite por ${mentor ? mentor.name : 'o mentor'} no Career Connect.`
+          : `Olá ${mentee.name}, o seu pedido de mentoria foi recusado por ${mentor ? mentor.name : 'o mentor'} no Career Connect.`);
       }
-    }
 
     res.json({ request });
   } catch (err) {

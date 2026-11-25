@@ -1,6 +1,7 @@
 'use strict';
 const { Message, Connection, User } = require('../models');
 const { sendEmail, messageReceivedEmailHtml } = require('../utils/email');
+const { notifyWhatsApp } = require('../utils/whatsapp');
 
 const getMessages = async (req, res) => {
   try {
@@ -47,12 +48,12 @@ const sendMessage = async (req, res) => {
 
     // Determine receiver (the other user in the connection)
     const receiverId = connection.user_a === fromUserId ? connection.user_b : connection.user_a;
-    const receiver = await User.findByPk(receiverId, { attributes: ['id', 'name', 'email'] });
+    const receiver = await User.findByPk(receiverId, { attributes: ['id', 'name', 'email', 'phone'] });
     const sender = await User.findByPk(fromUserId, { attributes: ['id', 'name'] });
 
     if (receiver && receiver.email) {
+      const preview = body.length > 60 ? body.slice(0, 60) + '…' : body;
       try {
-        const preview = body.length > 60 ? body.slice(0, 60) + '…' : body;
         sendEmail({
           to: receiver.email,
           subject: `Nova mensagem de ${sender.name} - Career Connect`,
@@ -66,6 +67,9 @@ const sendMessage = async (req, res) => {
       } catch (emailErr) {
         console.error('Failed to send message email:', emailErr.message);
       }
+
+      // Send the same notification via WhatsApp (if the receiver has a phone number)
+      await notifyWhatsApp(receiver.phone, `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name} no Career Connect: ${preview}`);
     }
 
     res.status(201).json({ message: msg });

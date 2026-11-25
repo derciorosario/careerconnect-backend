@@ -1,5 +1,5 @@
 'use strict';
-const { Registration, User, Event, AuditLog } = require('../models');
+const { Registration, User, Event, MentorProfile, MenteeProfile, AuditLog } = require('../models');
 
 const registerForEvent = async (req, res) => {
   try {
@@ -172,7 +172,16 @@ const getRegistrations = async (req, res) => {
     const registrations = await Registration.findAll({
       where: status ? { status } : {},
       include: [
-        { model: User, as: 'user', where, attributes: ['id', 'name', 'email', 'phone', 'role'] },
+        {
+          model: User,
+          as: 'user',
+          where,
+          attributes: ['id', 'name', 'email', 'phone', 'role', 'photo_url', 'linkedin_url'],
+          include: [
+            { model: MentorProfile, as: 'mentorProfile', attributes: { exclude: ['user_id', 'created_at', 'updated_at'] } },
+            { model: MenteeProfile, as: 'menteeProfile', attributes: { exclude: ['user_id', 'created_at', 'updated_at'] } },
+          ],
+        },
         { model: Event, as: 'event' },
       ],
     });
@@ -217,7 +226,10 @@ const getRegistrationByTicket = async (req, res) => {
     const registration = await Registration.findOne({
       where: { ticket_code },
       include: [
-        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'role'] },
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone', 'role', 'photo_url', 'linkedin_url'], include: [
+          { model: MentorProfile, as: 'mentorProfile' },
+          { model: MenteeProfile, as: 'menteeProfile' },
+        ] },
         { model: Event, as: 'event' },
       ],
     });

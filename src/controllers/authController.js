@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { User, MenteeProfile, MentorProfile, Registration, Event, AuditLog } = require('../models');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
 const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml, mentorApprovedEmailHtml } = require('../utils/email');
+const { notifyWhatsApp } = require('../utils/whatsapp');
 const { generateQR } = require('../utils/qr');
 
 const { Op } = require('sequelize');
@@ -110,6 +111,9 @@ const register = async (req, res) => {
       html: verificationEmailHtml({ name, code: otp }),
     });
 
+    // Send OTP via WhatsApp (if the user provided a phone number)
+    await notifyWhatsApp(phone, `Olá, ${name}! O seu código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.`);
+
     res.status(201).json({
       message: 'Conta criada. Verifique o seu email com o código enviado.',
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
@@ -188,6 +192,9 @@ const requestOTP = async (req, res) => {
       html: otpEmailHtml({ name: user.name, code: otp }),
     });
 
+    // Send OTP via WhatsApp (if the user has a phone number)
+    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código OTP do Career Connect é: ${otp}. Válido por 10 minutos.`);
+
     res.json({ message: 'Código OTP enviado por email' });
   } catch (err) {
     console.error(err);
@@ -264,6 +271,9 @@ const verifyEmail = async (req, res) => {
         text: `O seu registo foi concluído. Bilhete: ${ticketCode}. Código curto: ${ticketCode}.`,
         html: digitalTicketEmailHtml({ name: user.name, ticketCode, qrPayload, checkinUrl }),
       });
+
+      // Send digital ticket via WhatsApp (if the user has a phone number)
+      await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu registo no Career Connect foi concluído. Bilhete: ${ticketCode}. Apresente este código no evento.`);
     }
 
     const requiresApproval = user.role === 'mentor';
@@ -309,6 +319,9 @@ const resendEmailOTP = async (req, res) => {
       html: resendVerificationEmailHtml({ name: user.name, code: otp }),
     });
 
+    // Send verification code via WhatsApp (if the user has a phone number)
+    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu novo código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.`);
+
     res.json({ message: 'Código de verificação reenviado por email' });
   } catch (err) {
     console.error(err);
@@ -338,6 +351,9 @@ const forgotPassword = async (req, res) => {
       text: `O seu código de redefinição é: ${otp}. Válido por 10 minutos.`,
       html: forgotPasswordEmailHtml({ name: user.name, code: otp }),
     });
+
+    // Send reset code via WhatsApp (if the user has a phone number)
+    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código de redefinição de palavra-passe do Career Connect é: ${otp}. Válido por 10 minutos.`);
 
     res.json({ message: 'Código de redefinição enviado por email' });
   } catch (err) {

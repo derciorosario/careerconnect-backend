@@ -5,6 +5,7 @@ const {
 } = require('../models');
 const { Op } = require('sequelize');
 const { sendEmail, mentorApprovedEmailHtml } = require('../utils/email');
+const { notifyWhatsApp } = require('../utils/whatsapp');
 
 const getDashboard = async (req, res) => {
   try {
@@ -62,12 +63,11 @@ const getRegistrations = async (req, res) => {
           model: User,
           as: 'user',
           where: role ? { role } : {},
-          attributes: ['id', 'name', 'email', 'phone', 'role'],
-          include: [{
-            model: MentorProfile,
-            as: 'mentorProfile',
-            attributes: ['approval'],
-          }],
+          attributes: ['id', 'name', 'email', 'phone', 'role', 'photo_url', 'linkedin_url'],
+          include: [
+            { model: MentorProfile, as: 'mentorProfile', attributes: { exclude: ['user_id', 'created_at', 'updated_at'] } },
+            { model: MenteeProfile, as: 'menteeProfile', attributes: { exclude: ['user_id', 'created_at', 'updated_at'] } },
+          ],
         },
         { model: Event, as: 'event' },
       ],
@@ -103,6 +103,9 @@ const approveMentor = async (req, res) => {
           text: `Olá ${user.name}, a sua candidatura de mentor foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
           html: mentorApprovedEmailHtml({ name: user.name, approved: action === 'approve' }),
         });
+
+        // Send the same notification via WhatsApp (if the user has a phone number)
+        await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de mentor no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`);
       } catch (emailErr) {
         console.error('Failed to send mentor approval email:', emailErr.message);
       }

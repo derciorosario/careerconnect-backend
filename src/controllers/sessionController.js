@@ -1,9 +1,19 @@
 'use strict';
-const { Session, Event, Speaker, AuditLog } = require('../models');
+const { Session, Event, Speaker, AuditLog, User } = require('../models');
 const { Op } = require('sequelize');
 
+const resolveSpeakerId = async (value) => {
+  if (!value) return null;
+  const direct = await Speaker.findByPk(value);
+  if (direct) return direct.id;
+  let byUser = await Speaker.findOne({ where: { user_id: value } });
+  if (byUser) return byUser.id;
+  const user = await User.findByPk(value);
+  if (!user) return null;
+  byUser = await Speaker.create({ name: user.name || user.email, user_id: user.id });
+  return byUser.id;
+};
 const resolveEventId = async (explicit) => {
-  if (explicit) return explicit;
   const active = await Event.findOne({
     where: { status: { [Op.notIn]: ['finished', 'closed'] } },
     order: [['starts_at', 'DESC']],
@@ -43,7 +53,7 @@ const createSession = async (req, res) => {
       title,
       challenge: challenge || null,
       starts_at: starts_at || null,
-      speaker_id: speaker_id || null,
+      speaker_id: await resolveSpeakerId(speaker_id),
     });
 
     await AuditLog.create({
@@ -79,7 +89,7 @@ const updateSession = async (req, res) => {
     if (title !== undefined) session.title = title;
     if (challenge !== undefined) session.challenge = challenge;
     if (starts_at !== undefined) session.starts_at = starts_at;
-    if (speaker_id !== undefined) session.speaker_id = speaker_id;
+    if (speaker_id !== undefined) session.speaker_id = await resolveSpeakerId(speaker_id);
 
     await session.save();
 
