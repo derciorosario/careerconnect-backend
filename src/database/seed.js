@@ -9,10 +9,11 @@ const {
   User, MentorProfile, MenteeProfile, Event, Session, Registration, Round,
   Speaker, Booking, Wish, Match, Feedback, Connection, MentorshipRequest,
   Message, Question, Poll, Announcement, Notification, SurveyResponse,
-  NextStep, Badge, AuditLog, Questionnaire, RegistrationConfig,
+  NextStep, Badge, AuditLog, Questionnaire, RegistrationConfig, LandingConfig,
 } = db;
 const { DEFAULT_QUESTIONNAIRE } = require('../utils/questionnaireDefaults');
 const { DEFAULT_REGISTRATION_CONFIG } = require('../utils/registrationDefaults');
+const { DEFAULT_LANDING_CONFIG } = require('../utils/landingDefaults');
 
 (async () => {
   try {
@@ -337,47 +338,94 @@ await MenteeProfile.create({
     // ── REGISTRATION CONFIG (editable form options) ──────────
     await RegistrationConfig.create(DEFAULT_REGISTRATION_CONFIG);
 
-    // ── SESSIONS (always created) ────────────────────────────
-    const session1 = await Session.create({
-      event_id: event.id,
-      order: 1,
-      type: 'masterclass',
-      title: 'Estratégias para encontrar o primeiro passo',
-      starts_at: new Date('2026-12-04T14:00:00+02:00'),
-    });
-    const session2 = await Session.create({
-      event_id: event.id,
-      order: 2,
-      type: 'break',
-      title: 'Intervalo 1 - Rondas de networking',
-      starts_at: new Date('2026-12-04T15:00:00+02:00'),
-    });
-    const session3 = await Session.create({
-      event_id: event.id,
-      order: 3,
-      type: 'masterclass',
-      title: 'A arte de criar redes de contactos',
-      starts_at: new Date('2026-12-04T15:40:00+02:00'),
-    });
-    const session4 = await Session.create({
-      event_id: event.id,
-      order: 4,
-      type: 'break',
-      title: 'Intervalo 2 - Rondas de networking',
-      starts_at: new Date('2026-12-04T16:20:00+02:00'),
-    });
-    const session5 = await Session.create({
-      event_id: event.id,
-      order: 5,
-      type: 'masterclass',
-      title: 'O próximo passo depois da contratação',
-      starts_at: new Date('2026-12-04T17:00:00+02:00'),
-    });
+    // ── LANDING PAGE CONFIG ──────────────────────────────────
+    await LandingConfig.create({ content: DEFAULT_LANDING_CONFIG });
+
+    // ── LANDING MASTERCLASS MENTORS (show_on_landing) ────────
+    const landingMentors = [
+      {
+        name: 'Vicente Sitoe', email: 'vicente@careerconnect.co.mz', initials: 'VS',
+        job_title: 'Director Geral da SDO Moçambique', company: 'SDO Moçambique', sector: 'Preparação para o Mercado de Trabalho',
+        theme: 'Preparação para o Mercado de Trabalho',
+        title: 'Da Formação para o Mercado de Trabalho: Estratégias para Encontrar o Primeiro Emprego',
+        biography: 'Mestre em Psicologia e Pedagogia, com experiência em consultoria estratégica, gestão de recursos humanos e desenvolvimento organizacional. É autor de “RH com H de Humano” e de “Para uma Gestão de Pessoas Humanizada”.',
+        works: 'Obras: Viagem, pelos trilhos da vida · Avaliação de Desempenho Automatizada, Guia Prático · Para uma Gestão de Pessoas Humanizada · Poemas para Boi Dormir · Ensaio sobre um Manifesto · RH com H de Humano',
+      },
+      {
+        name: 'Arafat Cossa', email: 'arafat@careerconnect.co.mz', initials: 'AC',
+        job_title: 'Director da Arafat Executive Academy', company: 'Arafat Executive Academy', sector: 'Posicionamento e Oportunidades',
+        theme: 'Posicionamento e Oportunidades',
+        title: 'A Arte do Networking: Como Transformar Conexões em Oportunidades de Carreira',
+        biography: 'Formado em Comunicação e Relações Empresariais pelo ISCIM, é orador, formador, escritor e consultor. É autor de “Oratória: O Oxigénio das Relações de Influência”.',
+        works: '',
+      },
+      {
+        name: 'Marlene Chambule', email: 'marlene@careerconnect.co.mz', initials: 'MC',
+        job_title: 'Directora Executiva da Salto Moçambique', company: 'Salto Moçambique', sector: 'Desenvolvimento e Crescimento na Carreira',
+        theme: 'Desenvolvimento e Crescimento na Carreira',
+        title: 'Fui Contratado. E Agora? Como Construir uma Carreira de Sucesso',
+        biography: 'Licenciada em Ciências Políticas pela Universidade Eduardo Mondlane (UEM), construiu a sua carreira na Vale Moçambique e na Galp Moçambique. É fundadora da Salto Moçambique, dedicada à formação e à mentoria.',
+        works: '',
+      },
+    ];
+
+    const landingSessions = [];
+    const breakSessions = [];
+    for (let i = 0; i < landingMentors.length; i++) {
+      const lm = landingMentors[i];
+      const u = await User.create({
+        name: lm.name,
+        email: lm.email,
+        phone: `+2588500000${i}`,
+        role: 'mentor',
+        password_hash: await bcrypt.hash('Mentor123!', salt),
+        password_salt: salt,
+        emailVerified: true,
+      });
+      await MentorProfile.create({
+        user_id: u.id,
+        job_title: lm.job_title,
+        company: lm.company,
+        sector: lm.sector,
+        years: 8,
+        interests: [lm.sector],
+        can_help_goals: ['Desenvolver competências'],
+        support_type: 'Mentor',
+        max_mentees: 3,
+        approval: 'approved',
+        show_on_landing: true,
+        initials: lm.initials,
+        biography: lm.biography,
+        works: lm.works,
+      });
+      const masterclassOrder = i * 2 + 1;
+      const s = await Session.create({
+        event_id: event.id,
+        order: masterclassOrder,
+        type: 'masterclass',
+        title: lm.title,
+        theme: lm.theme,
+        mentor_id: u.id,
+        starts_at: new Date('2026-12-04T14:00:00+02:00'),
+      });
+      landingSessions.push(s);
+
+      if (i < landingMentors.length - 1) {
+        const b = await Session.create({
+          event_id: event.id,
+          order: masterclassOrder + 1,
+          type: 'break',
+          title: `Intervalo ${i + 1} - Rondas de networking`,
+          starts_at: new Date('2026-12-04T15:00:00+02:00'),
+        });
+        breakSessions.push(b);
+      }
+    }
 
     // ── ROUNDS (always created, all "planned" in BASIC_SEED) ──
     const rounds = [];
     for (let b = 1; b <= 2; b++) {
-      for (let r = 1; r <= 4; r++) {
+      for (let r = 1; r <= 2; r++) {
         const round = await Round.create({
           event_id: event.id,
           break_no: b,
@@ -392,7 +440,7 @@ await MenteeProfile.create({
       // ── SPEAKERS ────────────────────────────────────────────
       await Speaker.create({
         event_id: event.id,
-        session_id: session1.id,
+        session_id: landingSessions[0].id,
         name: 'Carlos Tembe',
         role: 'Engenheiro de Software',
         company: 'TechSolutions',
@@ -402,7 +450,7 @@ await MenteeProfile.create({
       });
       await Speaker.create({
         event_id: event.id,
-        session_id: session3.id,
+        session_id: landingSessions[1].id,
         name: 'Sara Cumbe',
         role: 'Directora de Finanças',
         company: 'Standard Bank',
@@ -412,7 +460,7 @@ await MenteeProfile.create({
       });
       await Speaker.create({
         event_id: event.id,
-        session_id: session5.id,
+        session_id: landingSessions[2].id,
         name: 'Rui Machava',
         role: 'Director de RH',
         company: 'Vale Moçambique',
@@ -434,7 +482,7 @@ await MenteeProfile.create({
 
       // ── BOOKINGS (mentees booking sessions) ─────────────────
       const mentees = [menteeUser, mentee2, mentee3, mentee4, mentee5, mentee6];
-      const masterclassSessions = [session1, session3, session5];
+      const masterclassSessions = landingSessions;
       for (const mentee of mentees) {
         for (const session of masterclassSessions) {
           await Booking.create({
@@ -545,7 +593,7 @@ await MenteeProfile.create({
       }
 
       // ── QUESTIONS (for sessions) ────────────────────────────
-      for (const session of [session1, session3, session5]) {
+      for (const session of landingSessions) {
         await Question.create({
           session_id: session.id,
           user_id: menteeUser.id,
@@ -566,7 +614,7 @@ await MenteeProfile.create({
 
       // ── POLLS (for sessions) ────────────────────────────────
       const poll = await Poll.create({
-        session_id: session2.id,
+        session_id: breakSessions[0].id,
         question: 'Maior obstáculo na busca de emprego?',
         options: ['Falta de experiência', 'Falta de contactos', 'Falta de formação', 'Outro'],
       });

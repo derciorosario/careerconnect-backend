@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const {
-  getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard,
+  getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard, updateUserByOrganizer,
 } = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.originalname.match(/\.(jpg|jpeg|png|webp)$/i)) {
       return cb(new Error('Only image files (jpg, jpeg, png, webp) are allowed'), false);
@@ -37,6 +37,7 @@ const upload = multer({
 router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, upload.single('photo'), updateProfile);
 router.get('/', authenticate, authorize('organizer'), getAllUsers);
+router.put('/:id', authenticate, authorize('organizer'), upload.single('photo'), updateUserByOrganizer);
 router.get('/mentee/dashboard', authenticate, authorize('mentee'), getMenteeDashboard);
 router.get('/mentor/dashboard', authenticate, authorize('mentor'), getMentorDashboard);
 

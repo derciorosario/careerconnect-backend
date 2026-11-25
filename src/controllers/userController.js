@@ -81,6 +81,47 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const updateUserByOrganizer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const { name, phone, linkedin_url, menteeProfile, mentorProfile } = req.body;
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (linkedin_url !== undefined) user.linkedin_url = linkedin_url;
+    if (req.file) user.photo_url = `/uploads/${req.file.filename}`;
+    else if (req.body.photo_url !== undefined && req.body.photo_url !== '') user.photo_url = req.body.photo_url;
+    await user.save();
+
+    let mp = menteeProfile;
+    let mtp = mentorProfile;
+    if (typeof mp === 'string') { try { mp = JSON.parse(mp); } catch {} }
+    if (typeof mtp === 'string') { try { mtp = JSON.parse(mtp); } catch {} }
+
+    if (user.role === 'mentee' && mp) {
+      const [profile] = await MenteeProfile.findOrCreate({ where: { user_id: user.id }, defaults: { user_id: user.id, ...mp } });
+      const { user_id, ...fields } = mp;
+      await profile.update(fields);
+    } else if (user.role === 'mentor' && mtp) {
+      const [profile] = await MentorProfile.findOrCreate({ where: { user_id: user.id }, defaults: { user_id: user.id, ...mtp } });
+      const { user_id, ...fields } = mtp;
+      await profile.update(fields);
+    }
+
+    const updated = await User.findByPk(user.id, {
+      include: [
+        { model: MenteeProfile, as: 'menteeProfile' },
+        { model: MentorProfile, as: 'mentorProfile' },
+      ],
+    });
+    res.json({ user: updated });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 const getAllUsers = async (req, res) => {
   try {
     const { role } = req.query;
@@ -153,4 +194,4 @@ const getMentorDashboard = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard };
+module.exports = { getProfile, updateProfile, getAllUsers, getMenteeDashboard, getMentorDashboard, updateUserByOrganizer };

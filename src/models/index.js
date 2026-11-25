@@ -39,6 +39,10 @@ User.hasOne(Speaker, { foreignKey: 'user_id', as: 'speakerProfile' });
 // Session belongs to optional Speaker
 Session.belongsTo(Speaker, { foreignKey: 'speaker_id', as: 'speaker' });
 
+// Session belongs to optional Mentor (User)
+Session.belongsTo(User, { foreignKey: 'mentor_id', as: 'mentor' });
+User.hasMany(Session, { foreignKey: 'mentor_id', as: 'mentorSessions' });
+
 // Event has many Registrations
 Event.hasMany(Registration, { foreignKey: 'event_id', as: 'registrations' });
 Registration.belongsTo(Event, { foreignKey: 'event_id', as: 'event' });
