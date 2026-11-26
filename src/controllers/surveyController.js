@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { DEFAULT_QUESTIONNAIRE } = require('../utils/questionnaireDefaults');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 const { sendEmail } = require('../utils/email');
+const { notifyLanding } = require('../utils/landingNotify');
 
 const resolveEventId = async (explicit) => {
   if (explicit && explicit !== 'current') return explicit;
@@ -155,6 +156,18 @@ const submitSurvey = async (req, res) => {
       entity: 'SurveyResponse',
       entity_id: response.id,
     });
+
+    // Notify the landing contact (email + WhatsApp) about the new response.
+    try {
+      const user = await User.findByPk(userId, { attributes: ['name', 'email'] });
+      const formLabel = isImpact ? 'Avaliação de Impacto da Mentoria' : 'Avaliação do Evento';
+      await notifyLanding({
+        subject: `[Career Connect] Nova resposta — ${formLabel}`,
+        text: `Uma nova resposta ao questionário foi submetida.\n\nFormulário: ${formLabel}\nUtilizador: ${user?.name || 'Utilizador'}\nEmail: ${user?.email || '—'}\nData: ${new Date().toLocaleString('pt-PT')}`,
+      });
+    } catch (e) {
+      // Non-blocking
+    }
 
     res.status(201).json({ survey: response });
   } catch (err) {

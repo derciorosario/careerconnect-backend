@@ -5,6 +5,7 @@ const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt
 const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml, mentorApprovedEmailHtml } = require('../utils/email');
 const { notifyWhatsApp, formatPhoneNumber } = require('../utils/whatsapp');
 const { generateQR } = require('../utils/qr');
+const { notifyLanding } = require('../utils/landingNotify');
 
 const { Op } = require('sequelize');
 
@@ -118,6 +119,12 @@ const register = async (req, res) => {
         approval: 'pending',
       });
     }
+
+    // Notify the landing contact (email + WhatsApp) about the new registration.
+    notifyLanding({
+      subject: `[Career Connect] Novo registo — ${role}`,
+      text: `Um novo utilizador registou-se na plataforma.\n\nNome: ${name}\nEmail: ${email}\nTelefone: ${phone || '—'}\nPerfil: ${role}\nData: ${new Date().toLocaleString('pt-PT')}`,
+    }).catch(() => {});
 
     // Create default event registration
     const event = await Event.findOne({ where: { status: 'active' } });
