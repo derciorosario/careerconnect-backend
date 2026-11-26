@@ -248,6 +248,43 @@ const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload, checkinUrl }) => 
   footerBand()
 );
 
+const welcomeEmailHtml = ({ name, role }) => render(
+  headerBand('Bem-vindo(a) ao Career Connect'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
+    <p style="margin: 0 0 24px;">A sua conta ${role === 'mentor' ? 'de mentor' : 'de mentorado'} no ${BRAND} está pronta. Já pode entrar na plataforma, explorar as funcionalidades e ${role === 'mentor' ? 'começar a receber mentorados' : 'conectar-se com mentores e participar no evento'}.</p>
+    <p style="margin: 0; font-size: 14px;">Bem-vindo(a) à ${BRAND}.</p>
+  `),
+  footerBand()
+);
+
+const surveyNotificationEmailHtml = ({ name, title, message, link }) => render(
+  headerBand(title || 'Novo Questionário'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá${name ? `, ${name}` : ''}!</h2>
+    <p style="margin: 0 0 24px; white-space: pre-line;">${message}</p>
+    ${link ? `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin-top: 10px;">
+        <tr>
+          <td align="center" style="padding: 12px 0;">
+            <a href="${link}" style="display: inline-block; background-color: ${PRIMARY_500}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 700; font-size: 15px;">Abrir questionário</a>
+          </td>
+        </tr>
+      </table>
+    ` : ''}
+  `),
+  footerBand()
+);
+
+const genericNotificationEmailHtml = ({ name, subject, text }) => render(
+  headerBand(subject || 'Notificação'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá${name ? `, ${name}` : ''}!</h2>
+    <p style="margin: 0; white-space: pre-line;">${text}</p>
+  `),
+  footerBand()
+);
+
 module.exports = {
   sendEmail,
   verificationEmailHtml,
@@ -260,4 +297,7 @@ module.exports = {
   mentorshipRequestReceivedEmailHtml,
   mentorshipRequestRespondedEmailHtml,
   connectionCreatedEmailHtml,
+  welcomeEmailHtml,
+  surveyNotificationEmailHtml,
+  genericNotificationEmailHtml,
 };

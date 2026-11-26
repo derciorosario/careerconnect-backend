@@ -1,6 +1,6 @@
 'use strict';
 const { LandingConfig } = require('../models');
-const { sendEmail } = require('./email');
+const { sendEmail, genericNotificationEmailHtml } = require('./email');
 const { notifyWhatsApp } = require('./whatsapp');
 
 // Returns the contact email/phone configured in the latest LandingConfig.
@@ -23,7 +23,7 @@ const notifyLanding = async ({ subject, text }) => {
 
   if (email) {
     try {
-      await sendEmail({ to: email, subject, text });
+      await sendEmail({ to: email, subject, text, html: genericNotificationEmailHtml({ name: '', subject, text }) });
     } catch (e) {
       // ignore email failures
     }

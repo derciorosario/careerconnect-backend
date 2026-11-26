@@ -4,7 +4,7 @@ const {
   Connection, MentorshipRequest, SurveyResponse, Event, AuditLog, RegistrationConfig,
 } = require('../models');
 const { Op } = require('sequelize');
-const { sendEmail, mentorApprovedEmailHtml } = require('../utils/email');
+const { sendEmail, mentorApprovedEmailHtml, welcomeEmailHtml } = require('../utils/email');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 const { DEFAULT_REGISTRATION_CONFIG } = require('../utils/registrationDefaults');
 
@@ -126,6 +126,7 @@ const approveMentor = async (req, res) => {
               to: user.email,
               subject: 'Bem-vindo(a) ao Career Connect',
               text: welcomeText,
+              html: welcomeEmailHtml({ name: user.name, role: 'mentor' }),
             });
           }
           if (canWhatsapp) {

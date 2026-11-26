@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const { User, MenteeProfile, MentorProfile, Registration, Event, AuditLog } = require('../models');
 const { signAccessToken, signRefreshToken, verifyToken } = require('../utils/jwt');
-const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml, mentorApprovedEmailHtml } = require('../utils/email');
+const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailHtml, forgotPasswordEmailHtml, digitalTicketEmailHtml, mentorApprovedEmailHtml, welcomeEmailHtml } = require('../utils/email');
 const { notifyWhatsApp, formatPhoneNumber } = require('../utils/whatsapp');
 const { generateQR } = require('../utils/qr');
 const { notifyLanding } = require('../utils/landingNotify');
@@ -342,6 +342,7 @@ const verifyEmail = async (req, res) => {
           to: email,
           subject: 'Bem-vindo(a) ao Career Connect',
           text: welcomeText,
+          html: welcomeEmailHtml({ name: user.name, role: 'mentee' }),
         });
       } catch (e) {
         // ignore email failures

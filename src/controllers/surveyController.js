@@ -3,7 +3,7 @@ const { SurveyResponse, Questionnaire, AuditLog, Event, User, Registration } = r
 const { Op } = require('sequelize');
 const { DEFAULT_QUESTIONNAIRE } = require('../utils/questionnaireDefaults');
 const { notifyWhatsApp } = require('../utils/whatsapp');
-const { sendEmail } = require('../utils/email');
+const { sendEmail, surveyNotificationEmailHtml } = require('../utils/email');
 const { notifyLanding } = require('../utils/landingNotify');
 
 const resolveEventId = async (explicit) => {
@@ -218,7 +218,12 @@ const notifySurvey = async (req, res) => {
       }
       if (user.notify_email !== false && user.email) {
         try {
-          await sendEmail({ to: user.email, subject: `${title} - Career Connect`, text: userMessage });
+          await sendEmail({
+            to: user.email,
+            subject: `${title} - Career Connect`,
+            text: userMessage,
+            html: surveyNotificationEmailHtml({ name: user.name, title, message: userMessage, link }),
+          });
           sent++;
         } catch (e) {
           // ignore individual failures
