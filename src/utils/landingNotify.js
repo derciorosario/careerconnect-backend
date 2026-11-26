@@ -3,6 +3,8 @@ const { LandingConfig } = require('../models');
 const { sendEmail, genericNotificationEmailHtml } = require('./email');
 const { notifyWhatsApp } = require('./whatsapp');
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 // Returns the contact email/phone configured in the latest LandingConfig.
 const getLandingContact = async () => {
   try {
@@ -31,7 +33,7 @@ const notifyLanding = async ({ subject, text }) => {
 
   if (phone) {
     try {
-      await notifyWhatsApp(phone, text);
+      await notifyWhatsApp(phone, `${text}\n\n${FRONTEND_URL}`);
     } catch (e) {
       // ignore whatsapp failures
     }

@@ -9,6 +9,8 @@ const { notifyLanding } = require('../utils/landingNotify');
 
 const { Op } = require('sequelize');
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 // Normalise a value coming from multipart form-data into a plain array.
 // The client sends JSON.stringify(...) strings, but JSON columns must receive
 // real arrays (otherwise Sequelize double-encodes them into a JSON string).
@@ -166,7 +168,7 @@ const register = async (req, res) => {
     });
 
     // Send OTP via WhatsApp (if the user provided a phone number)
-    await notifyWhatsApp(phone, `Olá, ${name}! O seu código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.`);
+    await notifyWhatsApp(phone, `Olá, ${name}! O seu código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.\n\n${FRONTEND_URL}`);
 
     res.status(201).json({
       message: 'Conta criada. Verifique o seu email e WhatsApp com o código enviado.',
@@ -251,7 +253,7 @@ const requestOTP = async (req, res) => {
     });
 
     // Send OTP via WhatsApp (if the user has a phone number)
-    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código OTP do Career Connect é: ${otp}. Válido por 10 minutos.`);
+    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código OTP do Career Connect é: ${otp}. Válido por 10 minutos.\n\n${FRONTEND_URL}`);
 
     res.json({ message: 'Código OTP enviado por email e WhatsApp' });
   } catch (err) {
@@ -331,7 +333,7 @@ const verifyEmail = async (req, res) => {
       });
 
       // Send digital ticket via WhatsApp (if the user has a phone number)
-      await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu registo no Career Connect foi concluído. Bilhete: ${ticketCode}. Apresente este código no evento.`);
+      await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu registo no Career Connect foi concluído. Bilhete: ${ticketCode}. Apresente este código no evento.\n\n${FRONTEND_URL}`);
     }
 
     // Welcome message for mentees once their email is confirmed (email + WhatsApp).
@@ -347,7 +349,7 @@ const verifyEmail = async (req, res) => {
       } catch (e) {
         // ignore email failures
       }
-      await notifyWhatsApp(user.phone, welcomeText);
+      await notifyWhatsApp(user.phone, `${welcomeText}\n\n${FRONTEND_URL}`);
     }
 
     const requiresApproval = user.role === 'mentor';
@@ -394,7 +396,7 @@ const resendEmailOTP = async (req, res) => {
     });
 
     // Send verification code via WhatsApp (if the user has a phone number)
-    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu novo código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.`);
+    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu novo código de verificação do Career Connect é: ${otp}. Válido por 10 minutos.\n\n${FRONTEND_URL}`);
 
     res.json({ message: 'Código de verificação reenviado por email e WhatsApp' });
   } catch (err) {
@@ -427,7 +429,7 @@ const forgotPassword = async (req, res) => {
     });
 
     // Send reset code via WhatsApp (if the user has a phone number)
-    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código de redefinição de palavra-passe do Career Connect é: ${otp}. Válido por 10 minutos.`);
+    await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu código de redefinição de palavra-passe do Career Connect é: ${otp}. Válido por 10 minutos.\n\n${FRONTEND_URL}`);
 
     res.json({ message: 'Código de redefinição enviado por email' });
   } catch (err) {

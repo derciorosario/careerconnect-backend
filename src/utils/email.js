@@ -10,6 +10,7 @@ const SURFACE_SOFT = '#eef0f5';
 const LINE = '#d6dae6';
 const INK = '#0e1530';
 const INK_MUTED = '#4b5575';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 let transporter;
 if (process.env.SMTP_TRANSPORT === 'log') {
@@ -96,12 +97,16 @@ const codeBox = (code) => `
   </tr>
 `;
 
-const footerBand = () => `
+const footerBand = ({ showPlatformLink = true } = {}) => `
   <tr>
     <td style="background-color: ${SURFACE_SOFT}; padding: 24px 30px; text-align: center; border-top: 1px solid ${LINE};">
       <p style="margin: 0; color: ${INK_MUTED}; font-size: 13px; line-height: 1.5;">
         ${new Date().getFullYear()} ${BRAND}. Todos os direitos reservados.
       </p>
+      ${showPlatformLink ? `
+      <p style="margin: 12px 0 0; font-size: 13px;">
+        <a href="${FRONTEND_URL}" style="color: ${PRIMARY_600}; font-weight: 700; text-decoration: none;">Aceder à plataforma</a>
+      </p>` : ''}
       <p style="margin: 8px 0 0; color: ${INK_MUTED}; font-size: 12px;">
         Esta mensagem foi enviada automaticamente. Por favor, não responda.
       </p>
@@ -245,7 +250,7 @@ const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload, checkinUrl }) => 
     ` : ''}
     <p style="margin: 0; font-size: 14px;">Bem-vindo à ${BRAND}.</p>
   `),
-  footerBand()
+  footerBand({ showPlatformLink: false })
 );
 
 const welcomeEmailHtml = ({ name, role }) => render(
@@ -273,7 +278,7 @@ const surveyNotificationEmailHtml = ({ name, title, message, link }) => render(
       </table>
     ` : ''}
   `),
-  footerBand()
+  footerBand({ showPlatformLink: !link })
 );
 
 const genericNotificationEmailHtml = ({ name, subject, text }) => render(

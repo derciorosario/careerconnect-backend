@@ -213,7 +213,7 @@ const notifySurvey = async (req, res) => {
       const userMessage = link ? `${message}\n\n${link}` : message;
 
       if (user.notify_whatsapp !== false && user.phone) {
-        await notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${userMessage}`);
+        await notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${userMessage}${link ? '' : `\n\n${frontendUrl}`}`);
         sent++;
       }
       if (user.notify_email !== false && user.email) {

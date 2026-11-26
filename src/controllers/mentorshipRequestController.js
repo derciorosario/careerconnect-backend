@@ -3,6 +3,8 @@ const { MentorshipRequest, User, MentorProfile, MenteeProfile, AuditLog, Connect
 const { sendEmail, mentorshipRequestReceivedEmailHtml, mentorshipRequestRespondedEmailHtml, connectionCreatedEmailHtml } = require('../utils/email');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 const createRequest = async (req, res) => {
   try {
     const { mentor_id, message } = req.body;
@@ -65,7 +67,7 @@ const createRequest = async (req, res) => {
 
       // Send the same notification via WhatsApp (if enabled and the mentor has a phone number)
       if (mentor.notify_whatsapp !== false) {
-        await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria no Career Connect.${message ? ` Mensagem: "${message}"` : ''}`);
+        await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, ${mentee.name} enviou-lhe um pedido de mentoria no Career Connect.${message ? ` Mensagem: "${message}"` : ''}\n\n${FRONTEND_URL}`);
       }
     }
 
@@ -154,7 +156,7 @@ const respondToRequest = async (req, res) => {
 
         // Send the same notification via WhatsApp (if enabled and the mentee has a phone number)
         if (mentee.notify_whatsapp !== false) {
-          await notifyWhatsApp(mentee.phone, `Olá ${mentee.name}, está agora conectado com ${mentor.name} no Career Connect.`);
+          await notifyWhatsApp(mentee.phone, `Olá ${mentee.name}, está agora conectado com ${mentor.name} no Career Connect.\n\n${FRONTEND_URL}`);
         }
       }
       if (mentor && mentor.email && mentee) {
@@ -177,7 +179,7 @@ const respondToRequest = async (req, res) => {
 
         // Send the same notification via WhatsApp (if enabled and the mentor has a phone number)
         if (mentor.notify_whatsapp !== false) {
-          await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, está agora conectado com ${mentee.name} no Career Connect.`);
+          await notifyWhatsApp(mentor.phone, `Olá ${mentor.name}, está agora conectado com ${mentee.name} no Career Connect.\n\n${FRONTEND_URL}`);
         }
       }
     }
@@ -206,8 +208,8 @@ const respondToRequest = async (req, res) => {
       // Send the same notification via WhatsApp (if enabled and the mentee has a phone number)
       if (mentee.notify_whatsapp !== false) {
         await notifyWhatsApp(mentee.phone, status === 'accepted'
-          ? `Olá ${mentee.name}, o seu pedido de mentoria foi aceite por ${mentor ? mentor.name : 'o mentor'} no Career Connect.`
-          : `Olá ${mentee.name}, o seu pedido de mentoria foi recusado por ${mentor ? mentor.name : 'o mentor'} no Career Connect.`);
+          ? `Olá ${mentee.name}, o seu pedido de mentoria foi aceite por ${mentor ? mentor.name : 'o mentor'} no Career Connect.\n\n${FRONTEND_URL}`
+          : `Olá ${mentee.name}, o seu pedido de mentoria foi recusado por ${mentor ? mentor.name : 'o mentor'} no Career Connect.\n\n${FRONTEND_URL}`);
       }
     }
 

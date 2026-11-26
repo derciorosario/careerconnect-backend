@@ -8,6 +8,8 @@ const { sendEmail, mentorApprovedEmailHtml, welcomeEmailHtml } = require('../uti
 const { notifyWhatsApp } = require('../utils/whatsapp');
 const { DEFAULT_REGISTRATION_CONFIG } = require('../utils/registrationDefaults');
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 const getDashboard = async (req, res) => {
   try {
     const totalUsers = await User.count();
@@ -111,7 +113,7 @@ const approveMentor = async (req, res) => {
 
         // Send the same notification via WhatsApp (if enabled and the user has a phone number)
         if (canWhatsapp) {
-          await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de mentor no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`);
+          await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de mentor no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.\n\n${FRONTEND_URL}`);
         }
       } catch (emailErr) {
         console.error('Failed to send mentor approval email:', emailErr.message);
@@ -130,7 +132,7 @@ const approveMentor = async (req, res) => {
             });
           }
           if (canWhatsapp) {
-            await notifyWhatsApp(user.phone, welcomeText);
+            await notifyWhatsApp(user.phone, `${welcomeText}\n\n${FRONTEND_URL}`);
           }
         } catch (welcomeErr) {
           console.error('Failed to send mentor welcome message:', welcomeErr.message);

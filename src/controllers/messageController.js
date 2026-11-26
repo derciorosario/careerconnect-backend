@@ -3,6 +3,8 @@ const { Message, Connection, User } = require('../models');
 const { sendEmail, messageReceivedEmailHtml } = require('../utils/email');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 const getMessages = async (req, res) => {
   try {
     const { connection_id } = req.query;
@@ -72,7 +74,7 @@ const sendMessage = async (req, res) => {
 
       // Send the same notification via WhatsApp (if enabled and the receiver has a phone number)
       if (receiver.notify_whatsapp !== false) {
-        await notifyWhatsApp(receiver.phone, `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name} no Career Connect: ${preview}`);
+        await notifyWhatsApp(receiver.phone, `Olá ${receiver.name}, recebeu uma nova mensagem de ${sender.name} no Career Connect: ${preview}\n\n${FRONTEND_URL}`);
       }
     }
 
