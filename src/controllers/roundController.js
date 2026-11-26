@@ -23,6 +23,22 @@ const getRounds = async (req, res) => {
   }
 };
 
+// Mark any running round whose countdown (ends_at) has elapsed as 'done'.
+// Only 'running' rounds are affected, so paused/terminated (planned) rounds are
+// never auto-finalised. Returns the rounds that were finalised.
+const finalizeExpiredRounds = async (eventId) => {
+  const now = new Date();
+  const where = { status: 'running', ends_at: { [Op.lte]: now } };
+  if (eventId) where.event_id = eventId;
+  const expired = await Round.findAll({ where });
+  for (const round of expired) {
+    round.status = 'done';
+    round.ends_at = now;
+    await round.save();
+  }
+  return expired;
+};
+
 const advanceRound = async (req, res) => {
   try {
     const organizerId = req.userId;
@@ -135,6 +151,9 @@ const resumeRound = async (req, res) => {
     }
 
     round.status = 'running';
+    if (round.paused_remaining != null) {
+      round.ends_at = new Date(Date.now() + round.paused_remaining);
+    }
     round.paused_remaining = null;
     await round.save();
 
@@ -154,12 +173,31 @@ const resumeRound = async (req, res) => {
 const getCurrentRound = async (req, res) => {
   try {
     const event_id = await resolveEventId(req.query.event_id);
+    // Auto-finalise any round whose countdown has elapsed (server-side timer).
+    await finalizeExpiredRounds(event_id);
     const where = event_id ? { event_id, status: 'running' } : { status: 'running' };
     const round = await Round.findOne({
       where,
       order: [['break_no', 'ASC'], ['round_no', 'ASC']],
     });
     res.json({ round });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Explicit countdown tick: finalises expired rounds and returns the current one.
+// Organizer clients can call this to drive the server-side timer.
+const tickRounds = async (req, res) => {
+  try {
+    const event_id = await resolveEventId(req.body?.event_id || req.query.event_id);
+    const finalized = await finalizeExpiredRounds(event_id);
+    const where = event_id ? { event_id, status: 'running' } : { status: 'running' };
+    const round = await Round.findOne({
+      where,
+      order: [['break_no', 'ASC'], ['round_no', 'ASC']],
+    });
+    res.json({ round, finalized: finalized.map((r) => r.id) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -288,4 +326,4 @@ const deleteRound = async (req, res) => {
   }
 };
 
-module.exports = { getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, resetRounds, createRound, updateRound, deleteRound };
+module.exports = { getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, tickRounds, resetRounds, createRound, updateRound, deleteRound };

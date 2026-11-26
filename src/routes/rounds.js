@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, resetRounds,
+  getRounds, advanceRound, pauseRound, resumeRound, getCurrentRound, tickRounds, resetRounds,
   createRound, updateRound, deleteRound,
 } = require('../controllers/roundController');
 const { authenticate, authorize } = require('../middleware/auth');
@@ -15,6 +15,7 @@ router.post('/advance', authenticate, authorize('organizer'), advanceRound);
 router.post('/pause', authenticate, authorize('organizer'), pauseRound);
 router.post('/resume', authenticate, authorize('organizer'), resumeRound);
 router.get('/current', authenticate, getCurrentRound);
+router.post('/tick', authenticate, authorize('organizer'), tickRounds);
 router.post('/reset', authenticate, authorize('organizer'), resetRounds);
 
 module.exports = router;

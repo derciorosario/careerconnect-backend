@@ -1,11 +1,12 @@
 'use strict';
 const {
   User, MentorProfile, MenteeProfile, Registration, Round, Match, Feedback,
-  Connection, MentorshipRequest, SurveyResponse, Event, AuditLog,
+  Connection, MentorshipRequest, SurveyResponse, Event, AuditLog, RegistrationConfig,
 } = require('../models');
 const { Op } = require('sequelize');
 const { sendEmail, mentorApprovedEmailHtml } = require('../utils/email');
 const { notifyWhatsApp } = require('../utils/whatsapp');
+const { DEFAULT_REGISTRATION_CONFIG } = require('../utils/registrationDefaults');
 
 const getDashboard = async (req, res) => {
   try {
@@ -162,6 +163,31 @@ const getReports = async (req, res) => {
       ? surveys.reduce((sum, s) => sum + (s.nps || 0), 0) / surveys.length
       : 0;
 
+    // Oferta e procura por área, a partir da base de dados.
+    // Oferta = mentores com interesse na área; Procura = mentorandos com interesse na área.
+    const config = await RegistrationConfig.findOne({ order: [['created_at', 'DESC']] });
+    const areas = (config && Array.isArray(config.areas) && config.areas.length > 0)
+      ? config.areas
+      : DEFAULT_REGISTRATION_CONFIG.areas;
+
+    const mentorProfiles = await MentorProfile.findAll({ attributes: ['interests'] });
+    const menteeProfiles = await MenteeProfile.findAll({ attributes: ['interests'] });
+    const totalMentors = mentorProfiles.length;
+    const totalMentees = menteeProfiles.length;
+    const countArea = (profiles, area) => profiles.reduce(
+      (sum, p) => sum + (Array.isArray(p.interests) && p.interests.includes(area) ? 1 : 0),
+      0,
+    );
+    const areaSupplyDemand = areas.map((area) => {
+      const supplyCount = countArea(mentorProfiles, area);
+      const demandCount = countArea(menteeProfiles, area);
+      return {
+        area,
+        supply: totalMentors > 0 ? Math.round((supplyCount / totalMentors) * 100) : 0,
+        demand: totalMentees > 0 ? Math.round((demandCount / totalMentees) * 100) : 0,
+      };
+    });
+
     res.json({
       totalRegistrations: registrations.length,
       present,
@@ -172,6 +198,7 @@ const getReports = async (req, res) => {
       avgRating,
       avgNPS,
       totalSurveys: surveys.length,
+      areaSupplyDemand,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

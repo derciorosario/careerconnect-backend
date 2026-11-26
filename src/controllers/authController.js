@@ -44,13 +44,26 @@ const register = async (req, res) => {
       await existing.destroy();
     }
 
+    // Validate phone number is not already registered.
+    // Normalise with the 258 country code so that "258...", "+258...",
+    // "0..." and local 9-digit numbers are all treated as the same number.
+    if (phone) {
+      const formattedPhone = formatPhoneNumber(phone);
+      const phoneConditions = [{ phone: String(phone).trim() }];
+      if (formattedPhone) phoneConditions.push({ phone: formattedPhone });
+      const phoneOwner = await User.findOne({ where: { [Op.or]: phoneConditions } });
+      if (phoneOwner) {
+        return res.status(400).json({ message: 'Já existe uma conta com este número de telemóvel' });
+      }
+    }
+
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
     const user = await User.create({
       name,
       email,
-      phone,
+      phone: phone ? (formatPhoneNumber(phone) || phone) : phone,
       role,
       password_hash,
       password_salt: salt,
