@@ -5,13 +5,15 @@ const { Op } = require('sequelize');
 const getMentorDirectory = async (req, res) => {
   try {
     const { area } = req.query;
+    // Organizers can see every mentor (including pending); others only approved ones.
+    const approvalFilter = req.userRole === 'organizer' ? {} : { approval: 'approved' };
     const mentors = await User.findAll({
       where: { role: 'mentor' },
       include: [
         {
           model: MentorProfile,
           as: 'mentorProfile',
-          where: { approval: 'approved', ...(area ? { interests: { [Op.contains]: [area] } } : {}) },
+          where: { ...approvalFilter, ...(area ? { interests: { [Op.contains]: [area] } } : {}) },
           required: true,
         },
       ],
@@ -26,10 +28,12 @@ const getMentorDirectory = async (req, res) => {
 
 const getMenteeDirectory = async (req, res) => {
   try {
+    // Organizers can see every mentee (including pending); others only approved ones.
+    const approvalFilter = req.userRole === 'organizer' ? {} : { approval: 'approved' };
     const mentees = await User.findAll({
       where: { role: 'mentee' },
       include: [
-        { model: MenteeProfile, as: 'menteeProfile' },
+        { model: MenteeProfile, as: 'menteeProfile', where: approvalFilter, required: true },
       ],
       attributes: ['id', 'name', 'email', 'phone', 'photo_url', 'linkedin_url'],
       order: [['name', 'ASC']],
