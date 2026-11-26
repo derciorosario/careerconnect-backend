@@ -215,7 +215,8 @@ const notifySurvey = async (req, res) => {
       if (user.notify_whatsapp !== false && user.phone) {
         await notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${userMessage}`);
         sent++;
-      } else if (user.notify_email !== false && user.email) {
+      }
+      if (user.notify_email !== false && user.email) {
         try {
           await sendEmail({ to: user.email, subject: `${title} - Career Connect`, text: userMessage });
           sent++;

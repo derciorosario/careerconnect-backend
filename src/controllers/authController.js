@@ -105,19 +105,6 @@ const register = async (req, res) => {
         pitch: pitch || '',
         job_obstacle: jobObstacle || null,
       });
-
-      // Welcome message for the new mentee (email + WhatsApp, non-blocking).
-      const welcomeText = `Olá ${name}, bem-vindo(a) ao Career Connect! A sua conta de mentorado foi criada com sucesso. Em breve poderá explorar mentores, pedir ligações e participar no evento.`;
-      try {
-        await sendEmail({
-          to: email,
-          subject: 'Bem-vindo(a) ao Career Connect',
-          text: welcomeText,
-        });
-      } catch (e) {
-        // ignore email failures
-      }
-      await notifyWhatsApp(phone, welcomeText);
     } else if (role === 'mentor') {
       await MentorProfile.create({
         user_id: user.id,
@@ -345,6 +332,21 @@ const verifyEmail = async (req, res) => {
 
       // Send digital ticket via WhatsApp (if the user has a phone number)
       await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu registo no Career Connect foi concluído. Bilhete: ${ticketCode}. Apresente este código no evento.`);
+    }
+
+    // Welcome message for mentees once their email is confirmed (email + WhatsApp).
+    if (user.role === 'mentee') {
+      const welcomeText = `Olá ${user.name}, bem-vindo(a) ao Career Connect! O seu email foi confirmado e a sua conta de mentorado está activa. Já pode explorar mentores, pedir ligações e participar no evento.`;
+      try {
+        await sendEmail({
+          to: email,
+          subject: 'Bem-vindo(a) ao Career Connect',
+          text: welcomeText,
+        });
+      } catch (e) {
+        // ignore email failures
+      }
+      await notifyWhatsApp(user.phone, welcomeText);
     }
 
     const requiresApproval = user.role === 'mentor';

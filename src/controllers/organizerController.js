@@ -116,6 +116,25 @@ const approveMentor = async (req, res) => {
       } catch (emailErr) {
         console.error('Failed to send mentor approval email:', emailErr.message);
       }
+
+      // Welcome message for mentors once approved (email + WhatsApp).
+      if (action === 'approve') {
+        const welcomeText = `Olá ${user.name}, bem-vindo(a) ao Career Connect como mentor! A sua candidatura foi aprovada. Já pode entrar na sua área e começar a receber mentorados.`;
+        try {
+          if (canEmail) {
+            sendEmail({
+              to: user.email,
+              subject: 'Bem-vindo(a) ao Career Connect',
+              text: welcomeText,
+            });
+          }
+          if (canWhatsapp) {
+            await notifyWhatsApp(user.phone, welcomeText);
+          }
+        } catch (welcomeErr) {
+          console.error('Failed to send mentor welcome message:', welcomeErr.message);
+        }
+      }
     }
 
     await AuditLog.create({

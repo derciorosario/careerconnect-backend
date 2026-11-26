@@ -1,7 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const path = require('path')
+const fs=require('fs');
+const { CronJob } = require('cron');
+const { backupFolders, restoreFolders } = require('../backup-and-restore');
 const { sequelize } = require('./config/db');
 
 const app = express();
@@ -48,6 +51,27 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || 'Internal server error' });
 });
 
+
+
+let backupAndRestoreFolder=path.join(__dirname,'../career-connect-backup-folder')
+let upload_file_path=path.join(__dirname,'/uploads')
+let defaultFolders=[
+  upload_file_path,
+  backupAndRestoreFolder
+]
+
+
+function createDefaultFolders(){
+     defaultFolders.forEach(i=>{
+        if (!fs.existsSync(i)) {
+          fs.mkdirSync(i, { recursive: true });
+          console.log(`Folder created at ${i}`)
+        } else {
+          console.log(`Folder already exists at ${i}`)
+        }
+     })
+}
+
 (async () => {
   try {
     await sequelize.authenticate();
@@ -56,6 +80,19 @@ app.use((err, req, res, next) => {
     // Sync models (schema changes handled by migrations)
     await sequelize.sync();
     console.log('Models synced...');
+
+
+    createDefaultFolders()
+
+    // Restore folders from the backup location on startup.
+    restoreFolders();
+
+    // Scheduled backup of the uploads folder (runs every hour at :00 and :55 UTC).
+    const BackUpJob = new CronJob('*/55 * * * *', () => {
+      console.log('Running backup...');
+      backupFolders();
+    }, null, true, 'UTC');
+    BackUpJob.start();
 
     app.listen(PORT, () => {
       console.log(`Career Connect API running on http://localhost:${PORT}`);
