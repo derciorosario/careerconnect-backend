@@ -73,7 +73,7 @@ const getRegistrations = async (req, res) => {
         {
           model: User,
           as: 'user',
-          where: role ? { role } : {},
+          where: role ? { role } : { role: { [Op.ne]: 'organizer' } },
           attributes: ['id', 'name', 'email', 'phone', 'role', 'photo_url', 'linkedin_url'],
           include: [
             { model: MentorProfile, as: 'mentorProfile', attributes: { exclude: ['user_id', 'created_at', 'updated_at'] } },
@@ -82,7 +82,7 @@ const getRegistrations = async (req, res) => {
         },
         { model: Event, as: 'event' },
       ],
-      order: [['created_at', 'DESC']],
+      order: [['created_at', 'DESC'], ['id', 'DESC']],
     });
     res.json({ registrations });
   } catch (err) {
