@@ -251,7 +251,7 @@ const pick2 = (arr, i) => {
       });
       await MenteeProfile.create({
         user_id: u.id,
-        level: pick(LEVELS, i),
+        level: pick(LEVELS, i) === 'Recém-graduado' ? 'recem_graduado' : 'estudante',
         course: pick(COURSES, i),
         institution: pick(INSTITUTIONS, i),
         interests: pick2(AREAS, i + 1),
