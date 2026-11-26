@@ -8,6 +8,25 @@ const { generateQR } = require('../utils/qr');
 
 const { Op } = require('sequelize');
 
+// Normalise a value coming from multipart form-data into a plain array.
+// The client sends JSON.stringify(...) strings, but JSON columns must receive
+// real arrays (otherwise Sequelize double-encodes them into a JSON string).
+const toArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      // Fall back to a comma-separated list.
+      return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+
 // Find a user by either an email address or a phone/WhatsApp number.
 // The login form accepts both in the same field.
 const findUserByIdentifier = async (identifier) => {
@@ -80,7 +99,7 @@ const register = async (req, res) => {
         level: level == "Recém-graduado" ? 'recem_graduado' :  level == "Estudante" ? 'estudante' : level,
         course: course || '',
         institution: institution || '',
-        interests: interests || [],
+        interests: toArray(interests),
         goal: goal || '',
         pitch: pitch || '',
         job_obstacle: jobObstacle || null,
@@ -92,8 +111,8 @@ const register = async (req, res) => {
         company: company || '',
         sector: sector || '',
         years: years ? Number(years) : 0,
-        interests: mentorInterests || [],
-        can_help_goals: canHelpGoals || [],
+        interests: toArray(mentorInterests),
+        can_help_goals: toArray(canHelpGoals),
         support_type: supportType || '',
         max_mentees: 3,
         approval: 'pending',

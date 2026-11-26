@@ -256,7 +256,29 @@ const deleteSurveyResponse = async (req, res) => {
   }
 };
 
+// Delete all survey responses (organizer only).
+const deleteAllSurveyResponses = async (req, res) => {
+  try {
+    const organizerId = req.userId;
+    const { event_id } = req.query;
+    const where = event_id && event_id !== 'current' ? { event_id } : {};
+    const deleted = await SurveyResponse.destroy({ where });
+
+    await AuditLog.create({
+      actor_id: organizerId,
+      action: 'delete_all_survey_responses',
+      entity: 'SurveyResponse',
+      entity_id: event_id || 'all',
+      metadata: { deleted },
+    });
+
+    res.json({ message: 'Todas as respostas foram eliminadas.', deleted });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   submitSurvey, getSurveyResults, getQuestionnaire, updateQuestionnaire,
-  getSurveyStatus, notifySurvey, deleteSurveyResponse,
+  getSurveyStatus, notifySurvey, deleteSurveyResponse, deleteAllSurveyResponses,
 };
