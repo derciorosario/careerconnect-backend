@@ -1,18 +1,11 @@
 'use strict';
 
 // Default landing page content. Structure mirrors Landingpage.jsx exactly.
+// NOTE: The `event` field is intentionally not stored here anymore. It is derived
+// at request time from the active Event (status === 'active') in landingController.
 const DEFAULT_LANDING_CONFIG = {
-  event: {
-    dateLabel: '04 de Dezembro de 2026',
-    timeLabel: 'Início às 14H00',
-    locationLabel: 'Hotel Cardoso | Maputo',
-    startAt: '2026-12-04T14:00:00+02:00',
-    venue: 'Hotel Cardoso',
-    venueFull: 'Hotel Cardoso, Maputo',
-    mapQuery: 'Hotel Cardoso Maputo',
-    calendarStart: '20261204T120000Z',
-    calendarEnd: '20261204T150000Z',
-  },
+  email: '',
+  phone: '',
   tutorialVideoUrl: '',
   axes: [
     { title: 'Preparação para o Mercado de Trabalho', items: ['Estratégias de procura de emprego', 'Construção de CV', 'Preparação para entrevistas'] },
