@@ -4,11 +4,15 @@ const {
   Connection, MentorshipRequest, SurveyResponse, Event, AuditLog, RegistrationConfig,
 } = require('../models');
 const { Op } = require('sequelize');
-const { sendEmail, mentorApprovedEmailHtml, welcomeEmailHtml } = require('../utils/email');
+const { sendEmail, mentorApprovedEmailHtml, menteeApprovedEmailHtml, welcomeEmailHtml, digitalTicketEmailHtml } = require('../utils/email');
 const { notifyWhatsApp } = require('../utils/whatsapp');
 const { DEFAULT_REGISTRATION_CONFIG } = require('../utils/registrationDefaults');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// When true, mentees must be approved before receiving their digital ticket.
+// Keep in sync with MENTEE_REQUIRES_APPROVAL in authController.js / .env.
+const MENTEE_REQUIRES_APPROVAL = String(process.env.MENTEE_REQUIRES_APPROVAL || 'false').toLowerCase() === 'true';
 
 const getDashboard = async (req, res) => {
   try {
@@ -19,6 +23,9 @@ const getDashboard = async (req, res) => {
 
     const pendingMentors = await MentorProfile.count({ where: { approval: 'pending' } });
     const approvedMentors = await MentorProfile.count({ where: { approval: 'approved' } });
+
+    const pendingMentees = await MenteeProfile.count({ where: { approval: 'pending' } });
+    const approvedMentees = await MenteeProfile.count({ where: { approval: 'approved' } });
 
     const registrations = await Registration.count();
     const present = await Registration.count({ where: { status: 'present' } });
@@ -42,6 +49,7 @@ const getDashboard = async (req, res) => {
       stats: {
         totalUsers, mentors, mentees, organizers,
         pendingMentors, approvedMentors,
+        pendingMentees, approvedMentees,
         registrations, present,
         totalMatches, totalConnections, totalMentorshipRequests, acceptedMentorships,
         avgRating, totalSurveys: surveys.length,
@@ -87,63 +95,99 @@ const approveMentor = async (req, res) => {
     const { mentor_id, action } = req.body; // action: 'approve' or 'reject'
     const organizerId = req.userId;
 
-    const profile = await MentorProfile.findOne({ where: { user_id: mentor_id } });
-    if (!profile) {
-      return res.status(404).json({ message: 'Mentor profile not found' });
+    const user = await User.findByPk(mentor_id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // Pick the profile that matches the user's role (mentor or mentee).
+    const ProfileModel = user.role === 'mentee' ? MenteeProfile : MentorProfile;
+    const profile = await ProfileModel.findOne({ where: { user_id: mentor_id } });
+    if (!profile) {
+      return res.status(404).json({ message: `${user.role === 'mentee' ? 'Mentee' : 'Mentor'} profile not found` });
+    }
+
+    const roleLabel = user.role == 'mentee' ? 'mentorado' : 'mentor';
 
     profile.approval = action === 'approve' ? 'approved' : 'rejected';
     profile.approved_by = organizerId;
     profile.approved_at = new Date();
     await profile.save();
 
-    const user = await User.findByPk(mentor_id);
     if (user) {
       const canEmail = user.notify_email !== false;
       const canWhatsapp = user.notify_whatsapp !== false;
       try {
         if (canEmail) {
+          const approvedTemplate = user.role === 'mentee' ? menteeApprovedEmailHtml : mentorApprovedEmailHtml;
           sendEmail({
             to: user.email,
-            subject: action === 'approve' ? 'Mentor aprovado - Career Connect' : 'Candidatura de mentor - Career Connect',
-            text: `Olá ${user.name}, a sua candidatura de mentor foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
-            html: mentorApprovedEmailHtml({ name: user.name, approved: action === 'approve' }),
+            subject: action === 'approve' ? `${roleLabel === 'mentor' ? 'Mentor' : 'Mentorado'} aprovado - Career Connect` : `Candidatura de ${roleLabel} - Career Connect`,
+            text: `Olá ${user.name}, a sua candidatura de ${roleLabel} foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.`,
+            html: approvedTemplate({ name: user.name, approved: action === 'approve' }),
           });
         }
 
         // Send the same notification via WhatsApp (if enabled and the user has a phone number)
         if (canWhatsapp) {
-          await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de mentor no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.\n\n${FRONTEND_URL}`);
+          await notifyWhatsApp(user.phone, `Olá ${user.name}, a sua candidatura de ${roleLabel} no Career Connect foi ${action === 'approve' ? 'aprovada' : 'rejeitada'}.\n\n${FRONTEND_URL}`);
         }
       } catch (emailErr) {
-        console.error('Failed to send mentor approval email:', emailErr.message);
+        console.error(`Failed to send ${roleLabel} approval email:`, emailErr.message);
       }
 
-      // Welcome message for mentors once approved (email + WhatsApp).
+      // Welcome message once approved (email + WhatsApp).
       if (action === 'approve') {
-        const welcomeText = `Olá ${user.name}, bem-vindo(a) ao Career Connect como mentor! A sua candidatura foi aprovada. Já pode entrar na sua área e começar a receber mentorados.`;
+        const welcomeText = user.role === 'mentee'
+          ? `Olá ${user.name}, bem-vindo(a) ao Career Connect! A sua candidatura foi aprovada. Já pode entrar na sua área e começar a explorar mentores.`
+          : `Olá ${user.name}, bem-vindo(a) ao Career Connect como mentor! A sua candidatura foi aprovada. Já pode entrar na sua área e começar a receber mentorados.`;
         try {
           if (canEmail) {
             sendEmail({
               to: user.email,
               subject: 'Bem-vindo(a) ao Career Connect',
               text: welcomeText,
-              html: welcomeEmailHtml({ name: user.name, role: 'mentor' }),
+              html: welcomeEmailHtml({ name: user.name, role: user.role }),
             });
           }
           if (canWhatsapp) {
             await notifyWhatsApp(user.phone, `${welcomeText}\n\n${FRONTEND_URL}`);
           }
         } catch (welcomeErr) {
-          console.error('Failed to send mentor welcome message:', welcomeErr.message);
+          console.error(`Failed to send ${roleLabel} welcome message:`, welcomeErr.message);
+        }
+
+        // For mentees that required approval: send the digital ticket only now.
+        if (user.role === 'mentee' && MENTEE_REQUIRES_APPROVAL) {
+          try {
+            const registration = await Registration.findOne({ where: { user_id: user.id } });
+            const ticketCode = registration?.ticket_code || null;
+            const qrPayload = registration?.qr_payload || null;
+            if (ticketCode) {
+              const checkinUrl = `${FRONTEND_URL}/checkin?ticket_code=${ticketCode}`;
+              if (canEmail) {
+                sendEmail({
+                  to: user.email,
+                  subject: 'O seu bilhete digital - Career Connect',
+                  text: `O seu registo foi concluído. Bilhete: ${ticketCode}. Código curto: ${ticketCode}.`,
+                  html: digitalTicketEmailHtml({ name: user.name, ticketCode, qrPayload, checkinUrl }),
+                });
+              }
+              if (canWhatsapp) {
+                await notifyWhatsApp(user.phone, `Olá, ${user.name}! O seu registo no Career Connect foi concluído. Bilhete: ${ticketCode}. Apresente este código no evento.\n\n${FRONTEND_URL}`);
+              }
+            }
+          } catch (ticketErr) {
+            console.error('Failed to send mentee digital ticket:', ticketErr.message);
+          }
         }
       }
     }
 
     await AuditLog.create({
       actor_id: organizerId,
-      action: action === 'approve' ? 'approve_mentor' : 'reject_mentor',
-      entity: 'MentorProfile',
+      action: action === 'approve' ? `approve_${user.role}` : `reject_${user.role}`,
+      entity: user.role === 'mentee' ? 'MenteeProfile' : 'MentorProfile',
       entity_id: profile.id,
     });
 

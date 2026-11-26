@@ -12,6 +12,9 @@ const MenteeProfile = sequelize.define('MenteeProfile', {
   goal: { type: DataTypes.STRING },
   pitch: { type: DataTypes.STRING(120) },
   job_obstacle: { type: DataTypes.STRING },
+  approval: { type: DataTypes.ENUM('pending', 'approved', 'rejected'), defaultValue: 'pending' },
+  approved_by: { type: DataTypes.UUID },
+  approved_at: { type: DataTypes.DATE },
 }, {
   timestamps: true,
   createdAt: 'created_at',

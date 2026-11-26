@@ -11,6 +11,10 @@ const { Op } = require('sequelize');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// When true, mentees follow the same approval flow as mentors: their account
+// stays pending until an organizer approves it, and they cannot log in before that.
+const MENTEE_REQUIRES_APPROVAL = String(process.env.MENTEE_REQUIRES_APPROVAL || 'false').toLowerCase() === 'true';
+
 // Normalise a value coming from multipart form-data into a plain array.
 // The client sends JSON.stringify(...) strings, but JSON columns must receive
 // real arrays (otherwise Sequelize double-encodes them into a JSON string).
@@ -106,6 +110,7 @@ const register = async (req, res) => {
         goal: goal || '',
         pitch: pitch || '',
         job_obstacle: jobObstacle || null,
+        approval: MENTEE_REQUIRES_APPROVAL ? 'pending' : 'approved',
       });
     } else if (role === 'mentor') {
       await MentorProfile.create({
@@ -210,6 +215,14 @@ const login = async (req, res) => {
       const mentorProfile = await MentorProfile.findOne({ where: { user_id: user.id } });
       if (!mentorProfile || mentorProfile.approval !== 'approved') {
         return res.status(403).json({ message: 'A sua conta de mentor ainda está pendente de aprovação pela equipa. Aguarde a aprovação antes de entrar.' });
+      }
+    }
+
+    // For mentees (when the approval flow is enabled): check if mentee profile is approved
+    if (user.role === 'mentee' && MENTEE_REQUIRES_APPROVAL) {
+      const menteeProfile = await MenteeProfile.findOne({ where: { user_id: user.id } });
+      if (!menteeProfile || menteeProfile.approval !== 'approved') {
+        return res.status(403).json({ message: 'A sua conta ainda está pendente de aprovação pela equipa. Aguarde a aprovação antes de entrar.' });
       }
     }
 
@@ -321,8 +334,10 @@ const verifyEmail = async (req, res) => {
     const accessToken = signAccessToken({ userId: user.id, role: user.role });
     const refreshToken = signRefreshToken({ userId: user.id });
 
-    // For mentees: send digital ticket with QR Code
-    if (user.role === 'mentee' && ticketCode) {
+    // For mentees: send digital ticket with QR Code.
+    // When MENTEE_REQUIRES_APPROVAL is enabled, the ticket is only sent after the
+    // organizer approves the mentee (handled in organizerController.approveMentor).
+    if (user.role === 'mentee' && ticketCode && !MENTEE_REQUIRES_APPROVAL) {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const checkinUrl = `${frontendUrl}/checkin?ticket_code=${ticketCode}`;
       await sendEmail({
@@ -337,7 +352,9 @@ const verifyEmail = async (req, res) => {
     }
 
     // Welcome message for mentees once their email is confirmed (email + WhatsApp).
-    if (user.role === 'mentee') {
+    // Skipped when the mentee still needs organizer approval (mirrors the mentor flow,
+    // where the welcome message is only sent after approval).
+    if (user.role === 'mentee' && !(MENTEE_REQUIRES_APPROVAL)) {
       const welcomeText = `Olá ${user.name}, bem-vindo(a) ao Career Connect! O seu email foi confirmado e a sua conta de mentorado está activa. Já pode explorar mentores, pedir ligações e participar no evento.`;
       try {
         await sendEmail({
@@ -352,7 +369,7 @@ const verifyEmail = async (req, res) => {
       await notifyWhatsApp(user.phone, `${welcomeText}\n\n${FRONTEND_URL}`);
     }
 
-    const requiresApproval = user.role === 'mentor';
+    const requiresApproval = user.role === 'mentor' || (user.role === 'mentee' && MENTEE_REQUIRES_APPROVAL);
 
     res.json({
       message: 'Email verificado com sucesso',

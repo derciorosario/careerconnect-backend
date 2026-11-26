@@ -171,6 +171,19 @@ const mentorApprovedEmailHtml = ({ name, approved }) => render(
   footerBand()
 );
 
+const menteeApprovedEmailHtml = ({ name, approved }) => render(
+  headerBand(approved ? 'Mentorado Aprovado' : 'Mentorado Rejeitado'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
+    ${approved ? `
+      <p style="margin: 0 0 24px;">A sua candidatura como mentorado na ${BRAND} foi <strong>aprovada</strong>! Já pode entrar na sua área e começar a explorar mentores, pedir ligações e participar no evento.</p>
+    ` : `
+      <p style="margin: 0 0 24px;">Lamentamos informar que a sua candidatura como mentorado na ${BRAND} foi <strong>rejeitada</strong>. Se achar que foi um erro, entre em contacto com a equipa organizadora.</p>
+    `}
+  `),
+  footerBand()
+);
+
 const messageReceivedEmailHtml = ({ receiverName, senderName, preview, checkinUrl }) => render(
   headerBand('Nova Mensagem'),
   bodySection(`
@@ -298,6 +311,7 @@ module.exports = {
   forgotPasswordEmailHtml,
   digitalTicketEmailHtml,
   mentorApprovedEmailHtml,
+  menteeApprovedEmailHtml,
   messageReceivedEmailHtml,
   mentorshipRequestReceivedEmailHtml,
   mentorshipRequestRespondedEmailHtml,
