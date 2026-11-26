@@ -8,6 +8,7 @@ const Questionnaire = sequelize.define('Questionnaire', {
   content: { type: DataTypes.JSON, allowNull: false },
   main_enabled: { type: DataTypes.BOOLEAN, defaultValue: true },
   impact_enabled: { type: DataTypes.BOOLEAN, defaultValue: true },
+  certificate_enabled: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
   timestamps: true,
   createdAt: 'created_at',

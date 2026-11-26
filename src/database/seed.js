@@ -480,7 +480,7 @@ const pick2 = (arr, i) => {
       }
 
       // ── ANNOUNCEMENTS ───────────────────────────────────────
-      await Announcement.create({
+      {/**   await Announcement.create({
         event_id: event.id,
         body: 'Bem-vindos ao Career Connect 2026! O evento começa às 14H00.',
         sent_by: organizer.id,
@@ -491,7 +491,7 @@ const pick2 = (arr, i) => {
         body: 'O intervalo de networking começa daqui a 10 minutos. Dirigam-se às mesas.',
         sent_by: organizer.id,
         sent_at: new Date(),
-      });
+      }); */}
 
       // ── NOTIFICATIONS ───────────────────────────────────────
       for (const user of allUsers) {

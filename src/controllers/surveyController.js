@@ -1,5 +1,5 @@
 'use strict';
-const { SurveyResponse, Questionnaire, AuditLog, Event, User } = require('../models');
+const { SurveyResponse, Questionnaire, AuditLog, Event, User, Registration } = require('../models');
 const { Op } = require('sequelize');
 const { DEFAULT_QUESTIONNAIRE } = require('../utils/questionnaireDefaults');
 const { notifyWhatsApp } = require('../utils/whatsapp');
@@ -33,6 +33,7 @@ const getQuestionnaire = async (req, res) => {
       content: questionnaire ? questionnaire.content : DEFAULT_QUESTIONNAIRE,
       main_enabled: questionnaire ? questionnaire.main_enabled !== false : true,
       impact_enabled: questionnaire ? questionnaire.impact_enabled !== false : true,
+      certificate_enabled: questionnaire ? !!questionnaire.certificate_enabled : false,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -42,8 +43,8 @@ const getQuestionnaire = async (req, res) => {
 const updateQuestionnaire = async (req, res) => {
   try {
     const organizerId = req.userId;
-    const { content, main_enabled, impact_enabled } = req.body;
-    if (!content || typeof content !== 'object') {
+    const { content, main_enabled, impact_enabled, certificate_enabled } = req.body;
+    if (content !== undefined && (content === null || typeof content !== 'object')) {
       return res.status(400).json({ message: 'Conteúdo inválido.' });
     }
     const event_id = await resolveEventId(req.body.event_id);
@@ -51,17 +52,19 @@ const updateQuestionnaire = async (req, res) => {
     const questionnaire = await findQuestionnaire(event_id);
 
     if (questionnaire) {
-      questionnaire.content = content;
+      if (content !== undefined) questionnaire.content = content;
       if (main_enabled !== undefined) questionnaire.main_enabled = main_enabled;
       if (impact_enabled !== undefined) questionnaire.impact_enabled = impact_enabled;
+      if (certificate_enabled !== undefined) questionnaire.certificate_enabled = certificate_enabled;
       if (event_id && !questionnaire.event_id) questionnaire.event_id = event_id;
       await questionnaire.save();
     } else {
       await Questionnaire.create({
         event_id,
-        content,
+        content: content !== undefined ? content : DEFAULT_QUESTIONNAIRE,
         main_enabled: main_enabled !== undefined ? main_enabled : true,
         impact_enabled: impact_enabled !== undefined ? impact_enabled : true,
+        certificate_enabled: certificate_enabled !== undefined ? certificate_enabled : false,
       });
     }
 
@@ -73,9 +76,10 @@ const updateQuestionnaire = async (req, res) => {
     });
 
     res.json({
-      content: questionnaire ? questionnaire.content : content,
+      content: questionnaire ? questionnaire.content : (content || DEFAULT_QUESTIONNAIRE),
       main_enabled: questionnaire ? questionnaire.main_enabled !== false : true,
       impact_enabled: questionnaire ? questionnaire.impact_enabled !== false : true,
+      certificate_enabled: questionnaire ? !!questionnaire.certificate_enabled : false,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -162,14 +166,25 @@ const submitSurvey = async (req, res) => {
 const notifySurvey = async (req, res) => {
   try {
     const organizerId = req.userId;
-    const { form } = req.body; // 'main' | 'impact'
+    const { form } = req.body; // 'main' | 'impact' | 'certificate'
     const isImpact = form === 'impact';
-    const title = isImpact ? 'Avaliação de Impacto da Mentoria' : 'Formulário de Avaliação do Evento';
-    const message = `Olá! Já está disponível o ${title} do Career Connect 2026. Acede à plataforma para responder. A tua opinião é muito importante!`;
+    const isCert = form === 'certificate';
+    const title = isCert
+      ? 'Certificado Digital de Participação'
+      : isImpact ? 'Avaliação de Impacto da Mentoria' : 'Formulário de Avaliação do Evento';
+    const message = isCert
+      ? `Olá! O seu Certificado Digital de Participação do Career Connect 2026 já está disponível. Acede à plataforma para o descarregar.`
+      : `Olá! Já está disponível o ${title} do Career Connect 2026. Acede à plataforma para responder. A tua opinião é muito importante!`;
 
     const users = await User.findAll({
-      where: { role: { [Op.in]: ['mentee', 'mentor'] } },
+      where: { role: { [Op.in]: ['mentee', 'mentor'] }, is_active: true },
       attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'],
+      include: [{
+        model: Registration,
+        as: 'registrations',
+        where: { status: 'present' },
+        attributes: [],
+      }],
     });
 
     let sent = 0;
@@ -226,7 +241,22 @@ const getSurveyResults = async (req, res) => {
   }
 };
 
+// Delete a single survey response (organizer only).
+const deleteSurveyResponse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const response = await SurveyResponse.findByPk(id);
+    if (!response) {
+      return res.status(404).json({ message: 'Resposta não encontrada.' });
+    }
+    await response.destroy();
+    res.json({ message: 'Resposta eliminada.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   submitSurvey, getSurveyResults, getQuestionnaire, updateQuestionnaire,
-  getSurveyStatus, notifySurvey,
+  getSurveyStatus, notifySurvey, deleteSurveyResponse,
 };
