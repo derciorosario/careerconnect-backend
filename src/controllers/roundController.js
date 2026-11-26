@@ -59,6 +59,18 @@ const advanceRound = async (req, res) => {
       await current.save();
     }
 
+    // Stop after finalising the current round without starting the next one.
+    // Used to end a break and wait for the organizer to explicitly start the next.
+    if (req.body && req.body.stop) {
+      await AuditLog.create({
+        actor_id: organizerId,
+        action: 'end_break',
+        entity: 'Round',
+        entity_id: current ? current.id : event_id,
+      });
+      return res.json({ round: current, stopped: true });
+    }
+
     // Find next planned round
     const nextRound = await Round.findOne({
       where: { event_id, status: 'planned' },
