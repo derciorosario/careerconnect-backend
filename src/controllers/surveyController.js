@@ -191,7 +191,7 @@ const notifySurvey = async (req, res) => {
 
     const users = await User.findAll({
       where: { role: { [Op.in]: ['mentee', 'mentor'] }, is_active: true },
-      attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'],
+      attributes: ['id', 'name', 'email', 'phone', 'role', 'notify_email', 'notify_whatsapp'],
       include: [{
         model: Registration,
         as: 'registrations',
@@ -200,14 +200,24 @@ const notifySurvey = async (req, res) => {
       }],
     });
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
     let sent = 0;
     for (const user of users) {
+      // For question forms (not the certificate) include the role-specific link.
+      const link = isCert
+        ? ''
+        : (user.role === 'mentor'
+          ? `${frontendUrl}/app/mentor/fecho`
+          : `${frontendUrl}/app/mentee/fecho`);
+      const userMessage = link ? `${message}\n\n${link}` : message;
+
       if (user.notify_whatsapp !== false && user.phone) {
-        await notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${message}`);
+        await notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${userMessage}`);
         sent++;
       } else if (user.notify_email !== false && user.email) {
         try {
-          await sendEmail({ to: user.email, subject: `${title} - Career Connect`, text: message });
+          await sendEmail({ to: user.email, subject: `${title} - Career Connect`, text: userMessage });
           sent++;
         } catch (e) {
           // ignore individual failures
