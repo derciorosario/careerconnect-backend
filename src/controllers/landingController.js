@@ -22,18 +22,58 @@ const isEventRelevant = (event) => {
   return Date.now() <= end + EVENT_LINGER_MS;
 };
 
+
+
+
+
+
+
+
+// Always format event dates using Mozambique timezone (UTC+2)
+const MOZAMBIQUE_TIMEZONE = 'Africa/Maputo';
+
+const getMozambiqueDateParts = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: MOZAMBIQUE_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts.map(({ type, value }) => [type, value])
+  );
+};
+
+
+
+
+
 // Build the landing `event` object from an Event row, keeping the exact same
 // keys/shape as before so the page structure never breaks.
+// Build the landing `event` object from an Event row
 const buildEventFromRecord = (event) => {
-  const start = new Date(event.starts_at);
+  const parts = getMozambiqueDateParts(event.starts_at);
   const venue = event.venue || '';
-  const validStart = !Number.isNaN(start.getTime());
 
   return {
-    dateLabel: validStart ? `${pad2(start.getDate())} de ${MONTHS_PT[start.getMonth()]} de ${start.getFullYear()}` : '',
-    timeLabel: validStart ? `Início às ${pad2(start.getHours())}H${pad2(start.getMinutes())}` : '',
+    dateLabel: parts
+      ? `${parts.day} de ${MONTHS_PT[Number(parts.month) - 1]} de ${parts.year}`
+      : '',
+
+    timeLabel: parts
+      ? `Início às ${parts.hour}H${parts.minute}`
+      : '',
+
     locationLabel: venue,
-    startAt: validStart ? start.toISOString() : null,
+    startAt: parts ? new Date(event.starts_at).toISOString() : null,
     venue,
     venueFull: venue,
     mapQuery: venue,

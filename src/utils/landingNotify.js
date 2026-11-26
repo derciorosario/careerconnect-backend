@@ -25,7 +25,7 @@ const notifyLanding = async ({ subject, text }) => {
 
   if (email) {
     try {
-      await sendEmail({ to: email, subject, text, html: genericNotificationEmailHtml({ name: '', subject, text }) });
+       sendEmail({ to: email, subject, text, html: genericNotificationEmailHtml({ name: '', subject, text }) });
     } catch (e) {
       // ignore email failures
     }
@@ -33,7 +33,7 @@ const notifyLanding = async ({ subject, text }) => {
 
   if (phone) {
     try {
-      await notifyWhatsApp(phone, `${text}\n\n${FRONTEND_URL}`);
+       notifyWhatsApp(phone, `${text}\n\n${FRONTEND_URL}`);
     } catch (e) {
       // ignore whatsapp failures
     }

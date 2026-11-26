@@ -1,5 +1,9 @@
 'use strict';
-const { Feedback, Match, AuditLog } = require('../models');
+const { Feedback, Match, AuditLog, User } = require('../models');
+const { sendEmail, genericNotificationEmailHtml } = require('../utils/email');
+const { notifyWhatsApp } = require('../utils/whatsapp');
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const submitFeedback = async (req, res) => {
   try {
@@ -63,6 +67,43 @@ const submitFeedback = async (req, res) => {
           });
         }
       }
+    }
+
+    // Notify the evaluated user (email + WhatsApp) about the feedback.
+    try {
+      const [fromUser, toUser] = await Promise.all([
+        User.findByPk(fromUserId, { attributes: ['id', 'name'] }),
+        User.findByPk(to_user_id, { attributes: ['id', 'name', 'email', 'phone', 'notify_email', 'notify_whatsapp'] }),
+      ]);
+
+      if (toUser) {
+        const message = wants_to_continue
+          ? `Olá ${toUser.name}, ${fromUser ? fromUser.name : 'um participante'} gostaria de continuar a conexão consigo no Career Connect.`
+          : `Olá ${toUser.name}, recebeu uma avaliação de ${fromUser ? fromUser.name : 'um participante'} no Career Connect.`;
+
+        if (toUser.notify_email !== false && toUser.email) {
+          try {
+            sendEmail({
+              to: toUser.email,
+              subject: 'Nova avaliação - Career Connect',
+              text: message,
+              html: genericNotificationEmailHtml({ name: toUser.name, subject: 'Nova avaliação', text: message }),
+            });
+          } catch (e) {
+            // ignore email failures
+          }
+        }
+
+        if (toUser.notify_whatsapp !== false && toUser.phone) {
+          try {
+            await notifyWhatsApp(toUser.phone, `${message}\n\n${FRONTEND_URL}`);
+          } catch (e) {
+            // ignore whatsapp failures
+          }
+        }
+      }
+    } catch (e) {
+      // Non-blocking
     }
 
     res.status(201).json({ feedback });

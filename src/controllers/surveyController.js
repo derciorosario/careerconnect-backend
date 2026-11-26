@@ -206,19 +206,21 @@ const notifySurvey = async (req, res) => {
     for (const user of users) {
       // For question forms (not the certificate) include the role-specific link.
       const link = isCert
-        ? ''
+        ? (user.role === 'mentor'
+          ? `${frontendUrl}/app/mentor/certificado`
+          : `${frontendUrl}/app/mentee/certificado`)
         : (user.role === 'mentor'
           ? `${frontendUrl}/app/mentor/fecho`
           : `${frontendUrl}/app/mentee/fecho`);
       const userMessage = link ? `${message}\n\n${link}` : message;
 
       if (user.notify_whatsapp !== false && user.phone) {
-        await notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${userMessage}${link ? '' : `\n\n${frontendUrl}`}`);
+         notifyWhatsApp(user.phone, `${user.name ? `Olá ${user.name},` : 'Olá!'} ${userMessage}${link ? '' : `\n\n${frontendUrl}`}`);
         sent++;
       }
       if (user.notify_email !== false && user.email) {
         try {
-          await sendEmail({
+           sendEmail({
             to: user.email,
             subject: `${title} - Career Connect`,
             text: userMessage,
