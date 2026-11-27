@@ -171,7 +171,7 @@ const register = async (req, res) => {
     // Send OTP via email
     await sendEmail({
       to: email,
-      subject: 'Verifique o seu email - Career Connect',
+      subject: `Verifique o seu email - Career Connect: ${otp}`,
       text: `O seu código de verificação é: ${otp}. Válido por 10 minutos.`,
       html: verificationEmailHtml({ name, code: otp }),
     });
@@ -196,7 +196,7 @@ const login = async (req, res) => {
 
     const user = await findUserByIdentifier(email);
     if (!user) {
-      return res.status(401).json({ message: 'Credenciais inválidas' });
+      return res.status(401).json({ message: 'Email não encontrado' });
     }
 
     if (user.password_hash) {
@@ -264,7 +264,7 @@ const requestOTP = async (req, res) => {
     // Send OTP via email
     await sendEmail({
       to: user.email,
-      subject: 'Seu código OTP - Career Connect',
+      subject: `Seu código OTP - Career Connect: ${otp}`,
       text: `O seu código de verificação é: ${otp}. Válido por 10 minutos.`,
       html: otpEmailHtml({ name: user.name, code: otp }),
     });
@@ -411,7 +411,7 @@ const resendEmailOTP = async (req, res) => {
 
     await sendEmail({
       to: email,
-      subject: 'Reenvio - Verifique o seu email - Career Connect',
+      subject: `Reenvio - Verifique o seu email - Career Connect: ${otp}`,
       text: `O seu novo código de verificação é: ${otp}. Válido por 10 minutos.`,
       html: resendVerificationEmailHtml({ name: user.name, code: otp }),
     });
