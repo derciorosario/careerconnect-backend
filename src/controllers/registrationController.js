@@ -1,5 +1,9 @@
 'use strict';
 const { Registration, User, Event, MentorProfile, MenteeProfile, AuditLog } = require('../models');
+const { sendEmail, checkInEmailHtml } = require('../utils/email');
+const { notifyWhatsApp } = require('../utils/whatsapp');
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 const registerForEvent = async (req, res) => {
   try {
@@ -80,6 +84,34 @@ const checkIn = async (req, res) => {
       entity: 'Registration',
       entity_id: registration.id,
     });
+
+    // Notify the checked-in user via email and WhatsApp (non-blocking).
+    try {
+      const event = await Event.findByPk(registration.event_id, { attributes: ['name'] });
+      const eventName = event ? event.name : '';
+      const canEmail = user.notify_email !== false && user.email;
+      const canWhatsapp = user.notify_whatsapp !== false && user.phone;
+      const checkinUrl = `${FRONTEND_URL}/app/${user.role === 'mentor' ? 'mentor' : 'mentee'}/inicio`;
+
+      if (canEmail) {
+        try {
+          sendEmail({
+            to: user.email,
+            subject: 'Check-in confirmado - Career Connect',
+            text: `Olá ${user.name}, o seu check-in foi confirmado com sucesso${eventName ? ` no ${eventName}` : ''}. A sua presença está registada.`,
+            html: checkInEmailHtml({ name: user.name, eventName, checkinUrl }),
+          });
+        } catch (e) {
+          // ignore email failures
+        }
+      }
+
+      if (canWhatsapp) {
+        notifyWhatsApp(user.phone, `Olá ${user.name}, o seu check-in foi confirmado com sucesso${eventName ? ` no ${eventName}` : ''}. A sua presença está registada.\n\n${checkinUrl}`);
+      }
+    } catch (e) {
+      // Non-blocking: never fail the check-in because of a notification error.
+    }
 
     res.json({ registration });
   } catch (err) {

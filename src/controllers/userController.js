@@ -6,6 +6,7 @@ const {
   Announcement, Notification,
 } = require('../models');
 const { sequelize } = require('../config/db');
+const { normalizeLevel } = require('../utils/registrationDefaults');
 
 const { Op } = require('sequelize');
 
@@ -61,6 +62,7 @@ const updateProfile = async (req, res) => {
       });
       if (mp) {
         const { user_id, ...fields } = menteeProfile;
+        if (fields.level !== undefined) fields.level = normalizeLevel(fields.level);
         await mp.update(fields);
       }
     } else if (user.role === 'mentor' && mentorProfile) {
@@ -109,6 +111,7 @@ const updateUserByOrganizer = async (req, res) => {
     if (user.role === 'mentee' && mp) {
       const [profile] = await MenteeProfile.findOrCreate({ where: { user_id: user.id }, defaults: { user_id: user.id, ...mp } });
       const { user_id, ...fields } = mp;
+      if (fields.level !== undefined) fields.level = normalizeLevel(fields.level);
       await profile.update(fields);
     } else if (user.role === 'mentor' && mtp) {
       const [profile] = await MentorProfile.findOrCreate({ where: { user_id: user.id }, defaults: { user_id: user.id, ...mtp } });

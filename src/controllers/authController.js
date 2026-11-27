@@ -6,6 +6,7 @@ const { sendEmail, verificationEmailHtml, otpEmailHtml, resendVerificationEmailH
 const { notifyWhatsApp, formatPhoneNumber } = require('../utils/whatsapp');
 const { generateQR } = require('../utils/qr');
 const { notifyLanding } = require('../utils/landingNotify');
+const { normalizeLevel } = require('../utils/registrationDefaults');
 
 const { Op } = require('sequelize');
 
@@ -103,7 +104,7 @@ const register = async (req, res) => {
     if (role === 'mentee') {
       await MenteeProfile.create({
         user_id: user.id,
-        level: level == "Recém-graduado" ? 'recem_graduado' :  level == "Estudante" ? 'estudante' : level,
+        level: normalizeLevel(level),
         course: course || '',
         institution: institution || '',
         interests: toArray(interests),

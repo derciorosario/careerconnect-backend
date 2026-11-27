@@ -28,6 +28,11 @@ const GOALS = DEFAULT_REGISTRATION_CONFIG.goals;
 const OBSTACLES = DEFAULT_REGISTRATION_CONFIG.obstacles;
 const SUPPORT_TYPES = DEFAULT_REGISTRATION_CONFIG.support_types;
 const LEVELS = DEFAULT_REGISTRATION_CONFIG.levels;
+const LEVEL_MAP = {
+  'Estudante': 'estudante',
+  'Recém-graduado': 'recem_graduado',
+  'Profissional Júnior': 'profissional_junior',
+};
 
 // ── Name / profile pools (used to generate varied mentors & mentees) ────────
 const FIRST_NAMES = [
@@ -251,7 +256,7 @@ const pick2 = (arr, i) => {
       });
       await MenteeProfile.create({
         user_id: u.id,
-        level: pick(LEVELS, i) === 'Recém-graduado' ? 'recem_graduado' : 'estudante',
+        level: LEVEL_MAP[pick(LEVELS, i)] || 'estudante',
         course: pick(COURSES, i),
         institution: pick(INSTITUTIONS, i),
         interests: pick2(AREAS, i + 1),

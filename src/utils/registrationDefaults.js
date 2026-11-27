@@ -20,7 +20,15 @@ const DEFAULT_REGISTRATION_CONFIG = {
   ],
   obstacles: ['Falta de experiência', 'Falta de contactos', 'Falta de formação', 'Outro'],
   support_types: ['Mentor', 'Coach', 'Orientação pontual'],
-  levels: ['Estudante', 'Recém-graduado'],
+  levels: ['Estudante', 'Recém-graduado', 'Profissional Júnior'],
 };
 
-module.exports = { DEFAULT_REGISTRATION_CONFIG };
+const LEVEL_TO_ENUM = {
+  'Estudante': 'estudante',
+  'Recém-graduado': 'recem_graduado',
+  'Profissional Júnior': 'profissional_junior',
+};
+
+const normalizeLevel = (level) => LEVEL_TO_ENUM[level] || level;
+
+module.exports = { DEFAULT_REGISTRATION_CONFIG, normalizeLevel };

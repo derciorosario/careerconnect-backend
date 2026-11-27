@@ -261,7 +261,7 @@ const digitalTicketEmailHtml = ({ name, ticketCode, qrPayload, checkinUrl }) => 
         </tr>
       </table>
     ` : ''}
-    <p style="margin: 0; font-size: 14px;">Bem-vindo à ${BRAND}.</p>
+    <p style="margin: 0; font-size: 14px;">Bem-vindo ao ${BRAND}.</p>
   `),
   footerBand({ showPlatformLink: false })
 );
@@ -294,6 +294,24 @@ const surveyNotificationEmailHtml = ({ name, title, message, link }) => render(
   footerBand({ showPlatformLink: !link })
 );
 
+const checkInEmailHtml = ({ name, eventName, checkinUrl }) => render(
+  headerBand('Presença Confirmada'),
+  bodySection(`
+    <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
+    <p style="margin: 0 0 24px;">O seu check-in foi confirmado com sucesso. A sua presença${eventName ? ` no <strong>${eventName}</strong>` : ''} está registada. Desejamos-lhe um excelente evento!</p>
+    ${checkinUrl ? `
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%; margin-top: 10px;">
+        <tr>
+          <td align="center" style="padding: 12px 0;">
+            <a href="${checkinUrl}" style="display: inline-block; background-color: ${PRIMARY_500}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 700; font-size: 15px;">Aceder à plataforma</a>
+          </td>
+        </tr>
+      </table>
+    ` : ''}
+  `),
+  footerBand({ showPlatformLink: !checkinUrl })
+);
+
 const genericNotificationEmailHtml = ({ name, subject, text }) => render(
   headerBand(subject || 'Notificação'),
   bodySection(`
@@ -318,5 +336,6 @@ module.exports = {
   connectionCreatedEmailHtml,
   welcomeEmailHtml,
   surveyNotificationEmailHtml,
+  checkInEmailHtml,
   genericNotificationEmailHtml,
 };
