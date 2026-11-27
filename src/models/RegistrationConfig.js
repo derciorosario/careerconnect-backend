@@ -9,6 +9,8 @@ const RegistrationConfig = sequelize.define('RegistrationConfig', {
   obstacles: { type: DataTypes.JSON, allowNull: false },
   support_types: { type: DataTypes.JSON, allowNull: false },
   levels: { type: DataTypes.JSON, allowNull: false },
+  academic_education: { type: DataTypes.JSON },
+  technical_courses: { type: DataTypes.JSON },
 }, {
   timestamps: true,
   createdAt: 'created_at',

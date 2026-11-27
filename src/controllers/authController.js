@@ -54,6 +54,7 @@ const register = async (req, res) => {
     const {
       name, email, phone, password, role,
       level, course, institution, interests, goal, pitch, jobObstacle,
+      academicEducation, technicalCourse,
       jobTitle, company, sector, years, mentorInterests, canHelpGoals, supportType,
       photo, linkedin,
     } = req.body;
@@ -107,6 +108,8 @@ const register = async (req, res) => {
         level: normalizeLevel(level),
         course: course || '',
         institution: institution || '',
+        academic_education: academicEducation || null,
+        technical_course: technicalCourse || null,
         interests: toArray(interests),
         goal: goal || '',
         pitch: pitch || '',

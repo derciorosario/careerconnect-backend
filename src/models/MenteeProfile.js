@@ -8,6 +8,8 @@ const MenteeProfile = sequelize.define('MenteeProfile', {
   level: { type: DataTypes.ENUM('estudante', 'recem_graduado', 'profissional_junior') },
   course: { type: DataTypes.STRING },
   institution: { type: DataTypes.STRING },
+  academic_education: { type: DataTypes.STRING },
+  technical_course: { type: DataTypes.STRING },
   interests: { type: DataTypes.JSON },
   goal: { type: DataTypes.STRING },
   pitch: { type: DataTypes.STRING(120) },

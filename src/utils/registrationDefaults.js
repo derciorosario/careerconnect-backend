@@ -21,6 +21,21 @@ const DEFAULT_REGISTRATION_CONFIG = {
   obstacles: ['Falta de experiência', 'Falta de contactos', 'Falta de formação', 'Outro'],
   support_types: ['Mentor', 'Coach', 'Orientação pontual'],
   levels: ['Estudante', 'Recém-graduado', 'Profissional Júnior'],
+  academic_education: [
+    '12.ª Classe (Ensino Secundário)',
+    'Ensino Técnico Médio',
+    'Ensino Superior (Licenciatura)',
+    'Pós-graduação',
+  ],
+  technical_courses: [
+    'Recursos Humanos',
+    'Secretariado',
+    'Contabilidade',
+    'Relações Públicas e Marketing',
+    'Tecnologia (Redes e Hardware)',
+    'Marketing Digital',
+    'Programação Web',
+  ],
 };
 
 const LEVEL_TO_ENUM = {

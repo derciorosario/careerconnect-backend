@@ -91,7 +91,7 @@ const checkIn = async (req, res) => {
       const eventName = event ? event.name : '';
       const canEmail = user.notify_email !== false && user.email;
       const canWhatsapp = user.notify_whatsapp !== false && user.phone;
-      const checkinUrl = `${FRONTEND_URL}/app/${user.role === 'mentor' ? 'mentor' : 'mentee'}/inicio`;
+      const checkinUrl = `${FRONTEND_URL}/app/${user.role === 'mentor' ? 'mentor' : 'mentee'}`;
 
       if (canEmail) {
         try {
