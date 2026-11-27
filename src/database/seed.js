@@ -29,7 +29,6 @@ const OBSTACLES = DEFAULT_REGISTRATION_CONFIG.obstacles;
 const SUPPORT_TYPES = DEFAULT_REGISTRATION_CONFIG.support_types;
 const LEVELS = DEFAULT_REGISTRATION_CONFIG.levels;
 const ACADEMIC_EDUCATION = DEFAULT_REGISTRATION_CONFIG.academic_education;
-const TECHNICAL_COURSES = DEFAULT_REGISTRATION_CONFIG.technical_courses;
 const LEVEL_MAP = {
   'Estudante': 'estudante',
   'Recém-graduado': 'recem_graduado',
@@ -262,7 +261,6 @@ const pick2 = (arr, i) => {
         course: pick(COURSES, i),
         institution: pick(INSTITUTIONS, i),
         academic_education: pick(ACADEMIC_EDUCATION, i),
-        technical_course: pick(TECHNICAL_COURSES, i),
         interests: pick2(AREAS, i + 1),
         goal: pick(GOALS, i),
         pitch: pick(PITCHES, i),
