@@ -271,7 +271,7 @@ const welcomeEmailHtml = ({ name, role }) => render(
   bodySection(`
     <h2 style="margin: 0 0 16px; color: ${NAVY_900}; font-size: 22px; font-weight: 700;">Olá, ${name}!</h2>
     <p style="margin: 0 0 24px;">A sua conta ${role === 'mentor' ? 'de mentor' : 'de mentorado'} no ${BRAND} está pronta. Já pode entrar na plataforma, explorar as funcionalidades e ${role === 'mentor' ? 'começar a receber mentorados' : 'conectar-se com mentores e participar no evento'}.</p>
-    <p style="margin: 0; font-size: 14px;">Bem-vindo(a) à ${BRAND}.</p>
+    <p style="margin: 0; font-size: 14px;">Bem-vindo(a) ao ${BRAND}.</p>
   `),
   footerBand()
 );
