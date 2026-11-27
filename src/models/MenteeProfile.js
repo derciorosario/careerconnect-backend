@@ -9,6 +9,7 @@ const MenteeProfile = sequelize.define('MenteeProfile', {
   course: { type: DataTypes.STRING },
   institution: { type: DataTypes.STRING },
   academic_education: { type: DataTypes.STRING },
+  field_of_study: { type: DataTypes.STRING },
   interests: { type: DataTypes.JSON },
   goal: { type: DataTypes.STRING },
   pitch: { type: DataTypes.STRING(120) },
